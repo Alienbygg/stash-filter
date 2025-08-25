@@ -1,0 +1,34 @@
+services:
+  stash-filter:
+    build: .
+    container_name: stash-filter
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./templates:/app/templates
+      - ./static:/app/static
+      - ./app:/app/app
+    environment:
+      - FLASK_ENV=production
+    networks:
+      - stash-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  stash-network:
+    driver: bridge
+
+volumes:
+  stash-filter-data:
+  stash-filter-logs:

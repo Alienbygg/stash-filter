@@ -1,0 +1,52 @@
+# Web Framework
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-WTF==1.1.1
+WTForms==3.0.1
+
+# HTTP Requests
+requests==2.31.0
+urllib3==2.0.4
+
+# Database (sqlite3 is built into Python)
+
+# Date/Time handling
+python-dateutil==2.8.2
+
+# JSON handling
+jsonschema==4.19.0
+
+# Scheduling
+APScheduler==3.10.4
+
+# Logging
+structlog==23.1.0
+
+# Configuration
+python-dotenv==1.0.0
+
+# GraphQL (for StashDB)
+gql==3.4.1
+requests-toolbelt==1.0.0
+
+# Validation
+validators==0.22.0
+
+# Web scraping utilities
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# System monitoring
+psutil==5.9.5
+
+# Production WSGI server
+gunicorn==21.2.0
+
+# Development tools (optional)
+pytest==7.4.2
+pytest-flask==1.2.0
+black==23.7.0
+flake8==6.0.0
+
+# Health check (using requests instead)
+# curl-cffi==0.5.10

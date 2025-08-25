@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>stash-filter</Name>
+  <Repository>alienbygg/stash-filter</Repository>
+  <Registry>https://hub.docker.com/r/alienbygg/stash-filter</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Alienbygg/stash-filter</Support>
+  <Project>https://github.com/Alienbygg/stash-filter</Project>
+  <Overview>
+    Stash-Filter automatically discovers new scenes for your favorite performers and studios. 
+    Integrates with Stash, StashDB, and Whisparr for comprehensive content management.
+    
+    Features:
+    - Daily content discovery
+    - Smart filtering and duplicate detection
+    - Web-based management interface  
+    - Automatic Whisparr integration
+    - Health monitoring and logging
+  </Overview>
+  <Category>MediaApp:Video</Category>
+  <WebUI>http://[IP]:[PORT:5000]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Alienbygg/stash-filter/main/unraid-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Alienbygg/stash-filter/main/static/images/stash-filter.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled>1704084000</DateInstalled>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>
+    Stash server running and accessible
+  </Requires>
+  <Config Name="WebUI Port" Target="5000" Default="5000" Mode="tcp" Description="Port for web interface" Type="Port" Display="always" Required="true" Mask="false">5000</Config>
+  <Config Name="App Data" Target="/app/data" Default="/mnt/user/appdata/stash-filter/data" Mode="rw" Description="Application data directory" Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/stash-filter/data</Config>
+  <Config Name="Logs" Target="/app/logs" Default="/mnt/user/appdata/stash-filter/logs" Mode="rw" Description="Log files directory" Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/stash-filter/logs</Config>
+  <Config Name="Config" Target="/app/config" Default="/mnt/user/appdata/stash-filter/config" Mode="rw" Description="Configuration files directory" Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/stash-filter/config</Config>
+  
+  <!-- Required Environment Variables -->
+  <Config Name="STASH_URL" Target="STASH_URL" Default="http://192.168.1.100:9999" Mode="" Description="Your Stash server URL" Type="Variable" Display="always" Required="true" Mask="false">http://192.168.1.100:9999</Config>
+  <Config Name="STASH_API_KEY" Target="STASH_API_KEY" Default="" Mode="" Description="Stash API Key (from Stash Settings -> Security)" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  
+  <!-- Optional Environment Variables -->
+  <Config Name="WHISPARR_URL" Target="WHISPARR_URL" Default="" Mode="" Description="Whisparr server URL (optional)" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="WHISPARR_API_KEY" Target="WHISPARR_API_KEY" Default="" Mode="" Description="Whisparr API Key (optional)" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="STASHDB_API_KEY" Target="STASHDB_API_KEY" Default="" Mode="" Description="StashDB API Key (optional)" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  
+  <!-- Flask Configuration -->
+  <Config Name="SECRET_KEY" Target="SECRET_KEY" Default="change-this-secret-key-in-production" Mode="" Description="Flask secret key (change this!)" Type="Variable" Display="advanced" Required="true" Mask="true">change-this-secret-key-in-production</Config>
+  <Config Name="LOG_LEVEL" Target="LOG_LEVEL" Default="INFO" Mode="" Description="Logging level (DEBUG, INFO, WARNING, ERROR)" Type="Variable" Display="advanced" Required="false" Mask="false">INFO</Config>
+  <Config Name="FLASK_ENV" Target="FLASK_ENV" Default="production" Mode="" Description="Flask environment" Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
+  
+  <!-- Database Configuration -->
+  <Config Name="DATABASE_PATH" Target="DATABASE_PATH" Default="/app/data/stash_filter.db" Mode="" Description="SQLite database file path" Type="Variable" Display="advanced" Required="false" Mask="false">/app/data/stash_filter.db</Config>
+  
+</Container>

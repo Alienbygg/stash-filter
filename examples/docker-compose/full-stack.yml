@@ -1,0 +1,145 @@
+# Full Stack Docker Compose
+# Complete setup with Stash, Whisparr, and reverse proxy
+
+version: '3.8'
+
+services:
+  # Reverse proxy for SSL and domain access
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: unless-stopped
+    
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./certs:/certs
+    
+    networks:
+      - web
+      - internal
+
+  # Stash media organizer
+  stash:
+    image: stashapp/stash:latest
+    container_name: stash
+    restart: unless-stopped
+    
+    volumes:
+      - ./stash/data:/root/.stash
+      - /path/to/your/media:/data
+    
+    environment:
+      - STASH_STASH=/data
+      - STASH_CACHE=/root/.stash/cache
+      - STASH_GENERATED=/root/.stash/generated
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stash.rule=Host(`stash.yourdomain.com`)"
+      - "traefik.http.routers.stash.entrypoints=websecure"
+      - "traefik.http.routers.stash.tls=true"
+      - "traefik.http.services.stash.loadbalancer.server.port=9999"
+    
+    networks:
+      - internal
+
+  # Whisparr download manager
+  whisparr:
+    image: cr.hotio.dev/hotio/whisparr:latest
+    container_name: whisparr
+    restart: unless-stopped
+    
+    volumes:
+      - ./whisparr/config:/config
+      - /path/to/downloads:/downloads
+      - /path/to/your/media:/data
+    
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whisparr.rule=Host(`whisparr.yourdomain.com`)"
+      - "traefik.http.routers.whisparr.entrypoints=websecure"
+      - "traefik.http.routers.whisparr.tls=true"
+      - "traefik.http.services.whisparr.loadbalancer.server.port=6969"
+    
+    networks:
+      - internal
+
+  # Stash-Filter application
+  stash-filter:
+    image: your-username/stash-filter:latest
+    container_name: stash-filter
+    restart: unless-stopped
+    
+    env_file:
+      - .env
+    
+    volumes:
+      - ./stash-filter/data:/app/data
+      - ./stash-filter/logs:/app/logs
+      - ./stash-filter/config:/app/config
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stash-filter.rule=Host(`stash-filter.yourdomain.com`)"
+      - "traefik.http.routers.stash-filter.entrypoints=websecure"
+      - "traefik.http.routers.stash-filter.tls=true"
+      - "traefik.http.services.stash-filter.loadbalancer.server.port=5000"
+    
+    depends_on:
+      - stash
+      - whisparr
+    
+    networks:
+      - internal
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Database browser for development
+  sqlite-browser:
+    image: coleifer/sqlite-web
+    container_name: stash-filter-db-browser
+    restart: unless-stopped
+    
+    volumes:
+      - ./stash-filter/data:/data
+    
+    command: ["-H", "0.0.0.0", "-x", "/data/stash_filter.db"]
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sqlite-browser.rule=Host(`db.stash-filter.yourdomain.com`)"
+      - "traefik.http.routers.sqlite-browser.entrypoints=websecure"
+      - "traefik.http.routers.sqlite-browser.tls=true"
+      - "traefik.http.services.sqlite-browser.loadbalancer.server.port=8080"
+    
+    networks:
+      - internal
+
+networks:
+  web:
+    external: true
+  internal:
+    driver: bridge
+
+volumes:
+  stash-data:
+  whisparr-config:
+  stash-filter-data:
+  traefik-certs:

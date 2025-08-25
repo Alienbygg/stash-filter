@@ -1,0 +1,54 @@
+services:
+  stash-filter-dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: stash-filter-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount source code for development
+      - ./app:/app/app
+      - ./templates:/app/templates  
+      - ./static:/app/static
+      # Data volumes
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    networks:
+      - stash-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Database browser for development
+  sqlite-browser:
+    image: coleifer/sqlite-web
+    container_name: stash-filter-db-browser
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    command: ["-H", "0.0.0.0", "-x", "/data/stash_filter.db"]
+    networks:
+      - stash-network
+    depends_on:
+      - stash-filter-dev
+
+networks:
+  stash-network:
+    driver: bridge
+
+volumes:
+  stash-filter-dev-data:
+  stash-filter-dev-logs:

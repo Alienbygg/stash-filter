@@ -1,0 +1,36 @@
+# Simple Docker Compose
+# Basic deployment with minimal configuration
+
+version: '3.8'
+
+services:
+  stash-filter:
+    image: your-username/stash-filter:latest
+    container_name: stash-filter
+    restart: unless-stopped
+    
+    ports:
+      - "5000:5000"
+    
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    
+    environment:
+      - STASH_URL=http://192.168.1.100:9999
+      - STASH_API_KEY=your-stash-api-key
+      - SECRET_KEY=your-secret-key
+      - LOG_LEVEL=INFO
+      - FLASK_ENV=production
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: stash-filter-network
