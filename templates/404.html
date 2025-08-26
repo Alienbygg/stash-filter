@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - Stash-Filter{% endblock %}
+
+{% block content %}
+<div class="container-fluid d-flex justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="text-center">
+        <div class="mb-4">
+            <i class="fas fa-search fa-5x text-muted"></i>
+        </div>
+        <h1 class="display-4 text-muted">404</h1>
+        <h2 class="mb-4">Page Not Found</h2>
+        <p class="lead text-muted mb-4">
+            The page you're looking for doesn't exist or has been moved.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-home"></i> Go Home
+            </a>
+            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Go Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-compass me-1"></i>
+                Quick Navigation
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Main Sections</h6>
+                        <ul class="list-unstyled">
+                            <li><a href="{{ url_for('index') }}" class="text-decoration-none">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a></li>
+                            <li><a href="{{ url_for('performers') }}" class="text-decoration-none">
+                                <i class="fas fa-users"></i> Performers
+                            </a></li>
+                            <li><a href="{{ url_for('studios') }}" class="text-decoration-none">
+                                <i class="fas fa-building"></i> Studios
+                            </a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Management</h6>
+                        <ul class="list-unstyled">
+                            <li><a href="{{ url_for('wanted_scenes') }}" class="text-decoration-none">
+                                <i class="fas fa-heart"></i> Wanted Scenes
+                            </a></li>
+                            <li><a href="{{ url_for('settings') }}" class="text-decoration-none">
+                                <i class="fas fa-cog"></i> Settings
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Stash-Filter{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2>Stash-Filter Settings</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Discovery Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="settings-form">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="discovery_enabled" {% if config.discovery_enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="discovery_enabled">
+                                        Enable automatic discovery
+                                    </label>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="discovery_frequency" class="form-label">Discovery frequency (hours)</label>
+                                    <input type="number" class="form-control" id="discovery_frequency" value="{{ config.discovery_frequency_hours }}" min="1" max="168">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="max_scenes" class="form-label">Max scenes per check</label>
+                                    <input type="number" class="form-control" id="max_scenes" value="{{ config.max_scenes_per_check }}" min="10" max="1000">
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="auto_add_whisparr" {% if config.auto_add_to_whisparr %}checked{% endif %}>
+                                    <label class="form-check-label" for="auto_add_whisparr">
+                                        Automatically add scenes to Whisparr
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Duration Filters</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="min_duration" class="form-label">Minimum duration (minutes)</label>
+                                <input type="number" class="form-control" id="min_duration" value="{{ config.min_duration_minutes }}" min="0">
+                                <small class="form-text text-muted">0 = no minimum</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="max_duration" class="form-label">Maximum duration (minutes)</label>
+                                <input type="number" class="form-control" id="max_duration" value="{{ config.max_duration_minutes }}" min="0">
+                                <small class="form-text text-muted">0 = no maximum</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Enhanced Category Filter Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>Unwanted Categories</h5>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="load-stashdb-categories">
+                                Load StashDB Categories
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="category-loading" class="text-center" style="display: none;">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading categories...</span>
+                                </div>
+                                <p class="mt-2">Loading categories from StashDB...</p>
+                            </div>
+                            
+                            <div id="category-selector" style="display: none;">
+                                <p class="text-muted">Select categories you want to exclude from discovery:</p>
+                                <div id="category-list" class="row">
+                                    <!-- Categories will be populated here -->
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="select-all-categories">Select All</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="deselect-all-categories">Deselect All</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Current unwanted categories -->
+                            <div class="mt-3">
+                                <h6>Currently Excluded Categories:</h6>
+                                <div id="current-unwanted-categories">
+                                    {% if config.get_unwanted_categories() %}
+                                        {% for category in config.get_unwanted_categories() %}
+                                            <span class="badge bg-danger me-1 mb-1">{{ category }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">No categories excluded</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Save/Test Buttons -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <button type="button" class="btn btn-success" id="save-settings">Save Settings</button>
+                            <button type="button" class="btn btn-outline-info" id="test-connections">Test API Connections</button>
+                            <button type="button" class="btn btn-outline-warning" id="run-discovery">Run Discovery Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- API Status -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>API Status</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Stash:</strong> {{ env_vars.stash_url }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Whisparr:</strong> {{ env_vars.whisparr_url }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>StashDB:</strong> {{ env_vars.stashdb_url }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enhanced category management
+let stashdbCategories = {};
+let selectedUnwanted = new Set();
+
+// Load current unwanted categories
+{% if config.get_unwanted_categories() %}
+    {% for category in config.get_unwanted_categories() %}
+        selectedUnwanted.add('{{ category }}');
+    {% endfor %}
+{% endif %}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load StashDB categories
+    document.getElementById('load-stashdb-categories').addEventListener('click', function() {
+        loadStashDBCategories();
+    });
+    
+    // Save settings
+    document.getElementById('save-settings').addEventListener('click', function() {
+        saveSettings();
+    });
+    
+    // Test connections
+    document.getElementById('test-connections').addEventListener('click', function() {
+        testConnections();
+    });
+    
+    // Run discovery
+    document.getElementById('run-discovery').addEventListener('click', function() {
+        runDiscovery();
+    });
+    
+    // Category selection helpers
+    document.getElementById('select-all-categories').addEventListener('click', function() {
+        document.querySelectorAll('.category-checkbox').forEach(cb => {
+            cb.checked = true;
+            selectedUnwanted.add(cb.value);
+        });
+        updateCurrentCategories();
+    });
+    
+    document.getElementById('deselect-all-categories').addEventListener('click', function() {
+        document.querySelectorAll('.category-checkbox').forEach(cb => {
+            cb.checked = false;
+            selectedUnwanted.delete(cb.value);
+        });
+        updateCurrentCategories();
+    });
+});
+
+function loadStashDBCategories() {
+    document.getElementById('category-loading').style.display = 'block';
+    
+    fetch('/api/get-stashdb-tags')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('category-loading').style.display = 'none';
+            
+            if (data.status === 'success') {
+                stashdbCategories = data.categories;
+                displayCategories(data.categories);
+                document.getElementById('category-selector').style.display = 'block';
+            } else {
+                alert('Error loading categories: ' + data.message);
+            }
+        })
+        .catch(error => {
+            document.getElementById('category-loading').style.display = 'none';
+            alert('Error loading categories: ' + error.message);
+        });
+}
+
+function displayCategories(categories) {
+    const categoryList = document.getElementById('category-list');
+    categoryList.innerHTML = '';
+    
+    Object.keys(categories).sort().forEach(categoryName => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'col-md-4 mb-3';
+        
+        let categoryHtml = '<div class="card"><div class="card-header"><h6 class="mb-0">' + categoryName + '</h6></div><div class="card-body">';
+        
+        categories[categoryName].forEach(tag => {
+            const isChecked = selectedUnwanted.has(tag.name) ? 'checked' : '';
+            categoryHtml += '<div class="form-check form-check-sm">';
+            categoryHtml += '<input class="form-check-input category-checkbox" type="checkbox" ';
+            categoryHtml += 'value="' + tag.name + '" id="tag-' + tag.id + '" ' + isChecked;
+            categoryHtml += ' onchange="toggleCategory(\'' + tag.name + '\')">';
+            categoryHtml += '<label class="form-check-label" for="tag-' + tag.id + '">';
+            categoryHtml += tag.name + '</label></div>';
+        });
+        
+        categoryHtml += '</div></div>';
+        categoryDiv.innerHTML = categoryHtml;
+        categoryList.appendChild(categoryDiv);
+    });
+}
+
+function toggleCategory(tagName) {
+    if (selectedUnwanted.has(tagName)) {
+        selectedUnwanted.delete(tagName);
+    } else {
+        selectedUnwanted.add(tagName);
+    }
+    updateCurrentCategories();
+}
+
+function updateCurrentCategories() {
+    const currentDiv = document.getElementById('current-unwanted-categories');
+    
+    if (selectedUnwanted.size === 0) {
+        currentDiv.innerHTML = '<span class="text-muted">No categories excluded</span>';
+    } else {
+        const badges = Array.from(selectedUnwanted)
+            .sort()
+            .map(cat => '<span class="badge bg-danger me-1 mb-1">' + cat + '</span>')
+            .join('');
+        currentDiv.innerHTML = badges;
+    }
+}
+
+function saveSettings() {
+    const settings = {
+        discovery_enabled: document.getElementById('discovery_enabled').checked,
+        discovery_frequency_hours: parseInt(document.getElementById('discovery_frequency').value),
+        max_scenes_per_check: parseInt(document.getElementById('max_scenes').value),
+        auto_add_to_whisparr: document.getElementById('auto_add_whisparr').checked,
+        min_duration_minutes: parseInt(document.getElementById('min_duration').value),
+        max_duration_minutes: parseInt(document.getElementById('max_duration').value),
+        unwanted_categories: Array.from(selectedUnwanted)
+    };
+    
+    fetch('/api/save-settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Settings saved successfully!');
+        } else {
+            alert('Error saving settings: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error saving settings: ' + error.message);
+    });
+}
+
+function testConnections() {
+    fetch('/api/test-connections', {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            let message = 'API Connection Results:' + String.fromCharCode(10);
+            message += 'Stash: ' + (data.stash ? 'Connected' : 'Failed') + String.fromCharCode(10);
+            message += 'StashDB: ' + (data.stashdb ? 'Connected' : 'Failed') + String.fromCharCode(10);
+            message += 'Whisparr: ' + (data.whisparr ? 'Connected' : 'Failed');
+            alert(message);
+        })
+        .catch(error => {
+            alert('Error testing connections: ' + error.message);
+        });
+}
+
+function runDiscovery() {
+    if (confirm('This will run scene discovery now. Continue?')) {
+        fetch('/api/run-discovery', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                let message = 'Discovery completed:' + String.fromCharCode(10);
+                message += 'New scenes: ' + data.new_scenes + String.fromCharCode(10);
+                message += 'Filtered scenes: ' + data.filtered_scenes + String.fromCharCode(10);
+                message += 'Added to Whisparr: ' + data.wanted_added;
+                alert(message);
+            })
+            .catch(error => {
+                alert('Error running discovery: ' + error.message);
+            });
+    }
+}
+</script>
+{% endblock %}

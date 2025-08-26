@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Stash-Filter{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-calendar"></i> Last run: {{ last_run_time or 'Never' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-primary text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Monitored Performers</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ performers_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{{ url_for('performers') }}">View Details</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-warning text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Monitored Studios</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ studios_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-building fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{{ url_for('studios') }}">View Details</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-success text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Wanted Scenes</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ wanted_scenes_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-heart fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{{ url_for('wanted_scenes') }}">View Details</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card bg-danger text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">System Status</div>
+                        <div class="h5 mb-0 font-weight-bold">
+                            <i class="fas fa-circle text-success"></i> Online
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-server fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{{ url_for('settings') }}">View Settings</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-clock me-1"></i>
+                Recent Discoveries
+            </div>
+            <div class="card-body">
+                {% if recent_scenes %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Performer/Studio</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scene in recent_scenes %}
+                                <tr>
+                                    <td>{{ scene.title[:50] }}{% if scene.title|length > 50 %}...{% endif %}</td>
+                                    <td>
+                                        {% if scene.performer %}
+                                            <span class="badge bg-primary">{{ scene.performer.name }}</span>
+                                        {% endif %}
+                                        {% if scene.studio %}
+                                            <span class="badge bg-secondary">{{ scene.studio.name }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ scene.discovered_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% if scene.is_owned %}
+                                            <span class="badge bg-info">Owned</span>
+                                        {% elif scene.is_filtered %}
+                                            <span class="badge bg-warning">Filtered</span>
+                                        {% elif scene.is_wanted %}
+                                            <span class="badge bg-success">Wanted</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No recent discoveries. Run discovery to find new scenes!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-cogs me-1"></i>
+                Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="syncFavorites()">
+                        <i class="fas fa-sync"></i> Sync Favorites from Stash
+                    </button>
+                    <button class="btn btn-success" onclick="runDiscovery()">
+                        <i class="fas fa-search"></i> Run Scene Discovery
+                    </button>
+                    <button class="btn btn-warning" onclick="cleanupDuplicates()">
+                        <i class="fas fa-broom"></i> Remove Duplicate Scenes
+                    </button>
+                    <a href="{{ url_for('settings') }}" class="btn btn-secondary">
+                        <i class="fas fa-cog"></i> Configure Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-1"></i>
+                System Information
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <div class="row">
+                        <div class="col-6"><strong>Version:</strong></div>
+                        <div class="col-6">1.0.0</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Docker:</strong></div>
+                        <div class="col-6"><i class="fas fa-check text-success"></i></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Database:</strong></div>
+                        <div class="col-6">SQLite</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Scheduler:</strong></div>
+                        <div class="col-6"><i class="fas fa-check text-success"></i></div>
+                    </div>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function syncFavorites() {
+        // This function is already defined in base.html
+        document.getElementById('sync-favorites').click();
+    }
+    
+    function runDiscovery() {
+        // This function is already defined in base.html
+        document.getElementById('run-discovery').click();
+    }
+    
+    function cleanupDuplicates() {
+        if (confirm('Remove duplicate scenes? This will merge duplicate entries and cannot be undone.')) {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cleaning...';
+            button.disabled = true;
+
+            fetch('/api/cleanup-duplicates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(`Cleanup completed!\n\nRemoved: ${data.removed_scenes} duplicate scenes\nRemoved: ${data.removed_wanted} duplicate wanted entries\nUpdated: ${data.updated_scenes} scenes`);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error);
+            })
+            .finally(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+    }
+</script>
+{% endblock %}

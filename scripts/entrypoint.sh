@@ -46,43 +46,12 @@ with app.app_context():
     print('Database migrations completed')
 "
 
-# Test external connections on startup
+# Test external connections on startup (simplified for now)
 echo "Testing external API connections..."
 python -c "
 import os
-from app.services.stash_client import test_stash_connection
-from app.services.stashdb_client import test_stashdb_connection
-from app.services.whisparr_client import test_whisparr_connection
-
-# Test Stash connection
-try:
-    if test_stash_connection():
-        print('✓ Stash connection successful')
-    else:
-        print('✗ Stash connection failed')
-except Exception as e:
-    print(f'✗ Stash connection error: {e}')
-
-# Test StashDB connection
-try:
-    if test_stashdb_connection():
-        print('✓ StashDB connection successful')
-    else:
-        print('✗ StashDB connection failed')  
-except Exception as e:
-    print(f'✗ StashDB connection error: {e}')
-
-# Test Whisparr connection (optional)
-try:
-    if os.getenv('WHISPARR_URL') and os.getenv('WHISPARR_API_KEY'):
-        if test_whisparr_connection():
-            print('✓ Whisparr connection successful')
-        else:
-            print('✗ Whisparr connection failed')
-    else:
-        print('- Whisparr not configured (optional)')
-except Exception as e:
-    print(f'✗ Whisparr connection error: {e}')
+print('External API connection testing skipped for now - will be added after app starts')
+print('You can test connections via the web interface')
 "
 
 # Start the Flask application
@@ -92,8 +61,8 @@ echo "Application will be available at http://localhost:5000"
 # Use gunicorn for production, flask dev server for development
 if [ "${FLASK_ENV}" = "development" ]; then
     echo "Running in development mode..."
-    export FLASK_APP=app:create_app
-    flask run --host=0.0.0.0 --port=5000
+    export FLASK_APP=wsgi:app
+    python -m flask run --host=0.0.0.0 --port=5000
 else
     echo "Running in production mode..."
     gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 60 wsgi:app

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Performers - Stash-Filter{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Monitored Performers</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-primary" id="sync-favorites">
+                <i class="fas fa-sync"></i> Sync from Stash
+            </button>
+            <button type="button" class="btn btn-sm btn-success" onclick="showAddPerformerModal()">
+                <i class="fas fa-plus"></i> Add Manually
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if performers %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-users me-1"></i>
+        Performers ({{ performers|length }})
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Aliases</th>
+                        <th>Monitored</th>
+                        <th>Last Checked</th>
+                        <th>StashDB ID</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for performer in performers %}
+                    <tr>
+                        <td>
+                            <strong>{{ performer.name }}</strong>
+                        </td>
+                        <td>
+                            {% set aliases = performer.get_aliases() %}
+                            {% if aliases %}
+                                {% for alias in aliases[:3] %}
+                                    <span class="badge bg-light text-dark me-1">{{ alias }}</span>
+                                {% endfor %}
+                                {% if aliases|length > 3 %}
+                                    <span class="badge bg-secondary">+{{ aliases|length - 3 }} more</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">No aliases</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if performer.monitored %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-eye"></i> Monitored
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-eye-slash"></i> Not Monitored
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if performer.last_checked %}
+                                <small class="text-muted">{{ performer.last_checked.strftime('%Y-%m-%d %H:%M') }}</small>
+                            {% else %}
+                                <small class="text-muted">Never</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if performer.stashdb_id %}
+                                <a href="https://stashdb.org/performers/{{ performer.stashdb_id }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt"></i> View
+                                </a>
+                            {% else %}
+                                <small class="text-muted">Not linked</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="toggleMonitoring('performer', {{ performer.id }})">
+                                    {% if performer.monitored %}
+                                        <i class="fas fa-eye-slash"></i> Stop
+                                    {% else %}
+                                        <i class="fas fa-eye"></i> Monitor
+                                    {% endif %}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="checkPerformer({{ performer.id }})">
+                                    <i class="fas fa-search"></i> Check Now
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+        <h4>No Performers Found</h4>
+        <p class="text-muted">No performers are currently being monitored.</p>
+        <button class="btn btn-primary" id="sync-favorites-empty">
+            <i class="fas fa-sync"></i> Sync Favorites from Stash
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Performance Statistics -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar me-1"></i>
+                Monitoring Statistics
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-success">{{ performers|selectattr('monitored')|list|length }}</h3>
+                            <small class="text-muted">Active</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-secondary">{{ performers|rejectattr('monitored')|list|length }}</h3>
+                            <small class="text-muted">Inactive</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-link me-1"></i>
+                StashDB Linking
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-primary">{{ performers|selectattr('stashdb_id')|list|length }}</h3>
+                            <small class="text-muted">Linked</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-warning">{{ performers|rejectattr('stashdb_id')|list|length }}</h3>
+                            <small class="text-muted">Unlinked</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function checkPerformer(performerId) {
+    // This would trigger a specific performer check
+    alert('Performer check functionality will be implemented in a future update.');
+}
+
+// Bind sync favorites to empty state button
+document.addEventListener('DOMContentLoaded', function() {
+    const syncEmptyButton = document.getElementById('sync-favorites-empty');
+    if (syncEmptyButton) {
+        syncEmptyButton.addEventListener('click', function() {
+            document.getElementById('sync-favorites').click();
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, current_app
 from datetime import datetime
 import os
 import psutil
+from sqlalchemy import text
 from app import db, __version__
 from app.models import Config, DiscoveryLog
 
@@ -17,7 +18,7 @@ def health_check():
     """Basic health check endpoint."""
     try:
         # Test database connection
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         return jsonify({
             'status': 'healthy',
@@ -45,7 +46,7 @@ def detailed_health_check():
         
         # Database check
         try:
-            db.session.execute('SELECT 1')
+            db.session.execute(text('SELECT 1'))
             health_data['checks']['database'] = {
                 'status': 'healthy',
                 'message': 'Database connection successful'
@@ -204,7 +205,7 @@ def readiness_check():
         # Check if application is ready to serve requests
         
         # Test database connection
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Check if basic configuration exists
         config = Config.query.first()
