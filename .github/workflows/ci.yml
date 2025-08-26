@@ -67,8 +67,18 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    - name: Check Docker Hub secrets
+      run: |
+        if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+          echo "::warning::Docker Hub secrets not configured. Skipping Docker push."
+          echo "SKIP_DOCKER_PUSH=true" >> $GITHUB_ENV
+        else
+          echo "Docker Hub secrets found. Will push to registry."
+          echo "SKIP_DOCKER_PUSH=false" >> $GITHUB_ENV
+        fi
+
     - name: Login to Docker Hub
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'release'
+      if: env.SKIP_DOCKER_PUSH == 'false' && (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'release')
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -78,7 +88,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ${{ secrets.DOCKERHUB_USERNAME }}/stash-filter
+        images: alienbygg/stash-filter  # Hardcoded to avoid issues with missing secrets
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -91,15 +101,27 @@ jobs:
       with:
         context: .
         platforms: linux/amd64,linux/arm64
-        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+        push: ${{ env.SKIP_DOCKER_PUSH == 'false' && (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'release') }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
+    - name: Docker push summary
+      run: |
+        if [ "${{ env.SKIP_DOCKER_PUSH }}" == "true" ]; then
+          echo "::notice::Docker image built but not pushed (missing secrets or wrong branch)"
+        else
+          echo "::notice::Docker image built and pushed successfully"
+        fi
+
   security:
     runs-on: ubuntu-latest
     continue-on-error: true  # Don't fail the build if security scan fails
+    permissions:
+      contents: read
+      security-events: write  # Required for uploading SARIF results
+      actions: read
     
     steps:
     - uses: actions/checkout@v4
@@ -114,10 +136,11 @@ jobs:
       continue-on-error: true
 
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3  # Updated to v3
       with:
         sarif_file: 'trivy-results.sarif'
       continue-on-error: true
+      if: always()  # Run even if previous step failed
 
   release-notes:
     needs: [test, docker]
