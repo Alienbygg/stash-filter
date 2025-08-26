@@ -77,6 +77,14 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.filtered_scenes') }}">
+                            <i class="fas fa-filter"></i> Filtered Scenes
+                            {% if nav_filtered_count > 0 %}
+                                <span class="badge bg-info">{{ nav_filtered_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.logs') }}">
                             <i class="fas fa-list"></i> Discovery Logs
                         </a>

@@ -402,3 +402,214 @@ class DiscoveryLog(db.Model):
             'started_date': self.started_date.isoformat(),
             'completed_date': self.completed_date.isoformat() if self.completed_date else None
         }
+
+
+class FilteredScene(db.Model):
+    """Model for tracking scenes that were filtered out during discovery."""
+    
+    __tablename__ = 'filtered_scenes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    stash_id = db.Column(db.String(50))
+    stashdb_id = db.Column(db.String(100))
+    title = db.Column(db.String(500), nullable=False)
+    performers = db.Column(db.Text)  # JSON array of performer names
+    studio = db.Column(db.String(200))
+    tags = db.Column(db.Text)  # JSON array of tags
+    duration = db.Column(db.Integer)  # Duration in seconds
+    release_date = db.Column(db.String(20))
+    
+    # Filter information
+    filter_reason = db.Column(db.String(100), nullable=False)
+    filter_category = db.Column(db.String(50), nullable=False)
+    filter_details = db.Column(db.Text)  # JSON with detailed filter info
+    
+    # Scene URLs and metadata
+    scene_url = db.Column(db.String(500))
+    thumbnail_url = db.Column(db.String(500))
+    
+    # Exception tracking
+    is_exception = db.Column(db.Boolean, default=False, nullable=False)
+    exception_date = db.Column(db.DateTime)
+    exception_reason = db.Column(db.String(500))
+    
+    # Timestamps
+    filtered_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    exceptions = db.relationship('FilterException', backref='filtered_scene', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<FilteredScene {self.title}>'
+    
+    def __str__(self):
+        return self.title
+    
+    @property
+    def performers_list(self):
+        """Get performers as a list."""
+        if self.performers:
+            try:
+                return json.loads(self.performers)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    @performers_list.setter
+    def performers_list(self, value):
+        """Set performers from a list."""
+        if isinstance(value, list):
+            self.performers = json.dumps(value)
+        else:
+            self.performers = json.dumps([])
+    
+    @property
+    def tags_list(self):
+        """Get tags as a list."""
+        if self.tags:
+            try:
+                return json.loads(self.tags)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    @tags_list.setter
+    def tags_list(self, value):
+        """Set tags from a list."""
+        if isinstance(value, list):
+            self.tags = json.dumps(value)
+        else:
+            self.tags = json.dumps([])
+    
+    @property
+    def filter_details_dict(self):
+        """Get filter details as a dictionary."""
+        if self.filter_details:
+            try:
+                return json.loads(self.filter_details)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return {}
+    
+    @filter_details_dict.setter
+    def filter_details_dict(self, value):
+        """Set filter details from a dictionary."""
+        if isinstance(value, dict):
+            self.filter_details = json.dumps(value)
+        else:
+            self.filter_details = json.dumps({})
+    
+    @property
+    def duration_minutes(self):
+        """Get duration in minutes."""
+        if self.duration:
+            return round(self.duration / 60)
+        return None
+    
+    @property
+    def has_active_exception(self):
+        """Check if scene has an active exception."""
+        from datetime import datetime
+        for exception in self.exceptions:
+            if exception.is_active and (not exception.expires_at or exception.expires_at > datetime.utcnow()):
+                return True
+        return False
+    
+    def to_dict(self):
+        """Convert filtered scene to dictionary."""
+        return {
+            'id': self.id,
+            'stash_id': self.stash_id,
+            'stashdb_id': self.stashdb_id,
+            'title': self.title,
+            'performers': self.performers_list,
+            'studio': self.studio,
+            'tags': self.tags_list,
+            'duration': self.duration,
+            'duration_minutes': self.duration_minutes,
+            'release_date': self.release_date,
+            'filter_reason': self.filter_reason,
+            'filter_category': self.filter_category,
+            'filter_details': self.filter_details_dict,
+            'scene_url': self.scene_url,
+            'thumbnail_url': self.thumbnail_url,
+            'is_exception': self.is_exception,
+            'has_active_exception': self.has_active_exception,
+            'exception_date': self.exception_date.isoformat() if self.exception_date else None,
+            'exception_reason': self.exception_reason,
+            'filtered_date': self.filtered_date.isoformat(),
+            'created_at': self.created_at.isoformat()
+        }
+
+
+class FilterException(db.Model):
+    """Model for tracking exceptions to filtered scenes."""
+    
+    __tablename__ = 'filter_exceptions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    filtered_scene_id = db.Column(db.Integer, db.ForeignKey('filtered_scenes.id'), nullable=False)
+    
+    # Exception configuration
+    exception_type = db.Column(db.String(50), nullable=False)  # 'permanent', 'temporary', 'one-time'
+    reason = db.Column(db.String(500))
+    created_by = db.Column(db.String(100), default='user', nullable=False)
+    
+    # Expiration settings
+    expires_at = db.Column(db.DateTime)  # For temporary exceptions
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    
+    # Usage tracking
+    times_used = db.Column(db.Integer, default=0, nullable=False)
+    last_used_date = db.Column(db.DateTime)
+    
+    # Additional settings
+    auto_add_to_whisparr = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<FilterException {self.id} - {self.exception_type}>'
+    
+    @property
+    def is_expired(self):
+        """Check if exception has expired."""
+        if self.expires_at:
+            return datetime.utcnow() > self.expires_at
+        return False
+    
+    @property
+    def is_valid(self):
+        """Check if exception is valid (active and not expired)."""
+        return self.is_active and not self.is_expired
+    
+    def use_exception(self):
+        """Mark exception as used and update usage stats."""
+        self.times_used += 1
+        self.last_used_date = datetime.utcnow()
+        
+        # For one-time exceptions, deactivate after use
+        if self.exception_type == 'one-time':
+            self.is_active = False
+    
+    def to_dict(self):
+        """Convert filter exception to dictionary."""
+        return {
+            'id': self.id,
+            'filtered_scene_id': self.filtered_scene_id,
+            'exception_type': self.exception_type,
+            'reason': self.reason,
+            'created_by': self.created_by,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'is_active': self.is_active,
+            'is_expired': self.is_expired,
+            'is_valid': self.is_valid,
+            'times_used': self.times_used,
+            'last_used_date': self.last_used_date.isoformat() if self.last_used_date else None,
+            'auto_add_to_whisparr': self.auto_add_to_whisparr,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }

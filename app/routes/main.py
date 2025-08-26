@@ -4,7 +4,7 @@ Main web routes for Stash-Filter application.
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from app import db
-from app.models import Performer, Studio, Scene, WantedScene, Config, DiscoveryLog
+from app.models import Performer, Studio, Scene, WantedScene, Config, DiscoveryLog, FilteredScene
 
 # Create blueprint
 main_bp = Blueprint('main', __name__)
@@ -148,6 +148,11 @@ def settings():
     
     return render_template('settings.html', config=config)
 
+@main_bp.route('/filtered-scenes')
+def filtered_scenes():
+    """Filtered scenes management page."""
+    return render_template('filtered_scenes.html')
+
 @main_bp.route('/logs')
 def logs():
     """Discovery logs page."""
@@ -186,18 +191,21 @@ def inject_navigation():
         performer_count = Performer.query.filter_by(monitored=True).count()
         studio_count = Studio.query.filter_by(monitored=True).count()
         wanted_count = WantedScene.query.filter_by(status='wanted').count()
+        filtered_count = FilteredScene.query.filter_by(is_exception=False).count()
         
         return dict(
             nav_performer_count=performer_count,
             nav_studio_count=studio_count,
-            nav_wanted_count=wanted_count
+            nav_wanted_count=wanted_count,
+            nav_filtered_count=filtered_count
         )
     except Exception:
         # Return zeros if database not ready
         return dict(
             nav_performer_count=0,
             nav_studio_count=0,
-            nav_wanted_count=0
+            nav_wanted_count=0,
+            nav_filtered_count=0
         )
 
 @main_bp.context_processor

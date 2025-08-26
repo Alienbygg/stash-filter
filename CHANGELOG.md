@@ -7,6 +7,195 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-08-26
+
+### 🎯 Major Feature: Filtered Scenes Manager
+
+A comprehensive management system for viewing, analyzing, and creating exceptions for filtered scenes. This addresses one of the most requested features - **transparency and control over automated filtering**.
+
+#### Added
+- **Filtered Scenes Dashboard** - Statistics and analytics for filtering patterns
+  - Total filtered scenes count (configurable time periods)
+  - Exception rate tracking and trends
+  - Filter reason breakdown with visual charts
+  - Most common filter categories analysis
+  - Recent activity timeline (7-day view)
+  - Top filtered studios identification
+
+- **Advanced Scene Browser** - Comprehensive filtered scene management
+  - Paginated table view with thumbnail previews
+  - Advanced search across titles, performers, and studios
+  - Multi-criteria filtering (reason, category, date range, exception status)
+  - Sortable columns with responsive design
+  - Bulk selection and operations
+  - Real-time search with debounced input
+
+- **Exception Management System** - Override filters with granular control
+  - **Permanent Exceptions** - Never filter these scenes again
+  - **Temporary Exceptions** - Allow scenes until specific expiration date
+  - **One-time Exceptions** - Allow for next discovery run only
+  - Bulk exception creation for multiple scenes
+  - Exception usage tracking and statistics
+  - Automatic expiration handling
+  - Integration with Whisparr for immediate downloads
+
+- **Scene Detail View** - Complete scene information and filtering context
+  - Full scene metadata (performers, studio, tags, duration)
+  - Detailed filter reasoning and criteria
+  - Exception history and status
+  - Direct links to source content
+  - Thumbnail preview with fallback placeholders
+
+- **Data Management Tools** - Maintenance and export functionality
+  - Configurable data cleanup (retention periods)
+  - CSV export with current filters applied
+  - Bulk operations for maintenance
+  - Database optimization tools
+
+#### Database Schema
+- **New Table: `filtered_scenes`** - Track all filtered content
+  - Scene metadata (title, performers, studio, tags)
+  - Filtering information (reason, category, details)
+  - Exception status and history
+  - Timestamps and source URLs
+  - Performance-optimized indexes
+
+- **New Table: `filter_exceptions`** - Manage filtering overrides
+  - Exception types and configurations
+  - Expiration handling for temporary exceptions
+  - Usage tracking and statistics
+  - Relationship management with filtered scenes
+  - Auto-cleanup for expired exceptions
+
+- **Migration System** - Safe schema updates
+  - Version-controlled database migrations
+  - Rollback capability for safety
+  - Migration status tracking
+  - Automated migration runner
+
+#### API Enhancements
+- **8 New REST Endpoints** for filtered scenes management
+  - `GET /api/filtered-scenes` - Paginated scene listing with filters
+  - `GET /api/filtered-scenes/stats` - Comprehensive statistics
+  - `GET /api/filtered-scenes/{id}` - Individual scene details
+  - `POST /api/filtered-scenes/{id}/exception` - Create scene exception
+  - `POST /api/filtered-scenes/bulk-exception` - Bulk exception creation
+  - `PUT /api/exceptions/{id}` - Update existing exceptions
+  - `DELETE /api/exceptions/{id}` - Remove exceptions
+  - `POST /api/filtered-scenes/cleanup` - Data cleanup operations
+
+- **Enhanced Discovery Integration** - Automatic filtered scene logging
+  - Scene filtering with comprehensive logging
+  - Exception checking during discovery
+  - Usage statistics for exceptions
+  - Performance-optimized database queries
+
+#### Frontend Features
+- **Responsive React-like Interface** - Modern, mobile-friendly design
+  - Bootstrap 5 with custom styling
+  - Font Awesome icons throughout
+  - Loading states and error handling
+  - Toast notifications for user feedback
+  - Modal dialogs for detailed operations
+
+- **Advanced JavaScript Functionality** - Rich client-side features
+  - Real-time search with 500ms debouncing
+  - Dynamic pagination with page size options
+  - Bulk selection with "select all" functionality
+  - Form validation with user-friendly error messages
+  - Auto-refresh for statistics (5-minute intervals)
+
+#### Developer Tools
+- **Sample Data Generator** - Testing and demonstration
+  - Generate realistic filtered scene data
+  - Configurable data volumes (10-1000+ scenes)
+  - Multiple filter reasons and categories
+  - Realistic exception scenarios
+  - Easy cleanup for development
+
+- **Migration Runner** - Database management
+  - Command-line migration tool
+  - Status checking and validation
+  - Safe upgrade/downgrade operations
+  - Development environment support
+
+#### User Experience Improvements
+- **Navigation Enhancement** - Updated main navigation
+  - New "Filtered Scenes" menu item
+  - Badge counters for filtered scene counts
+  - Improved navigation flow
+  - Consistent icon usage throughout
+
+- **Performance Optimizations** - Faster page loads and interactions
+  - Database query optimization with proper indexing
+  - Paginated data loading (default 20 items per page)
+  - Efficient bulk operations
+  - Reduced memory usage with lazy loading
+
+### Technical Implementation
+- **Backend Architecture** - Professional Python implementation
+  - SQLAlchemy models with proper relationships
+  - Comprehensive error handling and logging
+  - Input validation and sanitization
+  - RESTful API design patterns
+  - Database transaction management
+
+- **Frontend Architecture** - Modern JavaScript practices
+  - ES6+ features with browser compatibility
+  - Modular code organization
+  - Event-driven architecture
+  - Efficient DOM manipulation
+  - Bootstrap 5 component integration
+
+- **Database Design** - Optimized for performance
+  - Proper foreign key relationships
+  - Strategic indexes for common queries
+  - JSON field usage for flexible data
+  - Automatic timestamp management
+  - Cascade deletion for data integrity
+
+### Configuration Options
+- **New Environment Variables** - Enhanced customization
+  ```env
+  FILTERED_SCENES_RETENTION_DAYS=90
+  FILTERED_SCENES_PER_PAGE=20
+  FILTERED_SCENES_AUTO_CLEANUP=true
+  FILTERED_SCENES_NOTIFY_EXCEPTIONS=false
+  ```
+
+### Documentation
+- **Implementation Guide** - Complete setup documentation
+  - Step-by-step implementation instructions
+  - Integration examples with existing code
+  - API usage examples with curl commands
+  - Testing procedures and checklists
+  - Migration and upgrade procedures
+
+### Breaking Changes
+- **Database Schema** - New tables require migration
+  - Run `python run_migration.py 001_add_filtered_scenes upgrade`
+  - Backup your database before migration
+  - Migration is reversible with downgrade option
+
+### Upgrade Instructions
+1. **Backup Database** - Always backup before major updates
+2. **Pull Latest Code** - Update from GitHub repository
+3. **Run Migration** - Apply database schema changes
+4. **Restart Services** - Restart Docker containers
+5. **Verify Functionality** - Test new features
+
+### Future Enhancements (Planned for v1.2.0)
+- Advanced filtering rules editor
+- Custom filter reason categories
+- Exception templates for common scenarios
+- Webhook notifications for exceptions
+- Detailed analytics and reporting
+- Integration with external notification services
+
+---
+
+*This release represents a major step forward in user control and transparency. The Filtered Scenes Manager provides complete visibility into the filtering process while maintaining the automated efficiency that makes Stash-Filter valuable.*
+
 ## [1.0.0] - 2025-01-20
 
 ### Added
