@@ -118,3 +118,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Stash](https://github.com/stashapp/stash) - The amazing media organizer
 - [StashDB](https://stashdb.org) - Community database
 - [Whisparr](https://github.com/Whisparr/Whisparr) - Adult content management
+# Docker login fix
