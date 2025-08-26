@@ -10,28 +10,45 @@
   <Support>https://github.com/Alienbygg/stash-filter</Support>
   <Project>https://github.com/Alienbygg/stash-filter</Project>
   <Overview>
-    Stash-Filter automatically discovers new scenes for your favorite performers and studios. 
-    Integrates with Stash, StashDB, and Whisparr for comprehensive content management.
+    Stash-Filter automatically discovers new scenes for your favorite performers and studios. Integrates with Stash, StashDB, and Whisparr for comprehensive content management.
     
-    Features:
-    - Daily content discovery
-    - Smart filtering and duplicate detection
-    - Web-based management interface  
-    - Automatic Whisparr integration
-    - Health monitoring and logging
+    ✨ NEW in v1.1.0: Filtered Scenes Manager
+    - See exactly what gets filtered and why
+    - Create exceptions to rescue wanted scenes
+    - Analytics dashboard with filtering insights
+    - Bulk operations for efficient management
+    
+    🎯 Core Features:
+    - Daily automated content discovery from StashDB
+    - Smart filtering (duplicates, unwanted tags, studios)
+    - Professional web interface with responsive design
+    - Complete Whisparr integration for downloads
+    - SQLite database with health monitoring
+    - Docker deployment with Unraid template
+    - Professional logging and error handling
+    
+    🔧 Perfect For:
+    - Stash users wanting automated content discovery
+    - Self-hosted media enthusiasts
+    - Users managing large adult content libraries
+    
+    📋 Requirements:
+    - Stash server (local network access)
+    - Optional: Whisparr for automatic downloads
+    - Optional: StashDB API key for enhanced features
   </Overview>
-  <Category>MediaApp:Video</Category>
+  <Category>MediaApp:Video MediaServer:Video Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:5000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Alienbygg/stash-filter/main/unraid-template.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/Alienbygg/stash-filter/main/static/images/stash-filter.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>
-  <DateInstalled>1704084000</DateInstalled>
-  <DonateText/>
-  <DonateLink/>
+  <DateInstalled>1735689600</DateInstalled>
+  <DonateText>If you find Stash-Filter helpful, consider supporting development!</DonateText>
+  <DonateLink>https://github.com/sponsors/Alienbygg</DonateLink>
   <Requires>
-    Stash server running and accessible
+    Stash server running and accessible on your local network. Stash must be configured with API access enabled. Optional but recommended: Whisparr for automatic downloads.
   </Requires>
   <Config Name="WebUI Port" Target="5000" Default="5000" Mode="tcp" Description="Port for web interface" Type="Port" Display="always" Required="true" Mask="false">5000</Config>
   <Config Name="App Data" Target="/app/data" Default="/mnt/user/appdata/stash-filter/data" Mode="rw" Description="Application data directory" Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/stash-filter/data</Config>
