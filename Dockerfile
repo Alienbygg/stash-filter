@@ -27,11 +27,17 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs
 
-# Set permissions
+# Set permissions for scripts and migrations
 RUN chmod +x /app/scripts/entrypoint.sh
+RUN chmod +x /app/run_migration.py
+RUN find /app/migrations -name "*.py" -exec chmod +x {} \;
 
 # Create cron job for daily checks
 RUN echo "0 6 * * * cd /app && python app/scheduler.py" | crontab -
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV DATABASE_PATH=/app/data/stash_filter.db
 
 # Expose port
 EXPOSE 5000

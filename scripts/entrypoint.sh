@@ -1,10 +1,12 @@
 #!/bin/bash
 
 # Stash-Filter Docker Entrypoint Script
-
 set -e
 
 echo "Starting Stash-Filter application..."
+
+# Set default database path if not provided
+export DATABASE_PATH=${DATABASE_PATH:-/app/data/stash_filter.db}
 
 # Check if data directory exists and create if not
 if [ ! -d "/app/data" ]; then
@@ -19,7 +21,7 @@ if [ ! -d "/app/logs" ]; then
 fi
 
 # Initialize database if it doesn't exist
-if [ ! -f "/app/data/stash_filter.db" ]; then
+if [ ! -f "$DATABASE_PATH" ]; then
     echo "Initializing database..."
     python -c "
 from app import create_app
@@ -31,20 +33,50 @@ with app.app_context():
 "
 fi
 
-# Start cron daemon for scheduled tasks
-echo "Starting cron daemon..."
-cron
-
-# Run database migrations if needed
-echo "Running database migrations..."
-python -c "
+# Run database migrations if migration system exists
+if [ -f "/app/run_migration.py" ] && [ -d "/app/migrations" ]; then
+    echo "Running database migrations..."
+    
+    # Get list of migration files and sort them
+    migration_files=$(find /app/migrations -name "*.py" -type f ! -name "__*" | sort)
+    
+    for migration_file in $migration_files; do
+        if [ -f "$migration_file" ]; then
+            migration_name=$(basename "$migration_file" .py)
+            echo "Checking migration: $migration_name"
+            
+            # Check if migration is needed and run it
+            if ! python /app/run_migration.py "$migration_name" status 2>/dev/null | grep -q "APPLIED"; then
+                echo "Running migration: $migration_name"
+                python /app/run_migration.py "$migration_name" upgrade
+                if [ $? -eq 0 ]; then
+                    echo "Migration $migration_name completed successfully"
+                else
+                    echo "Migration $migration_name failed!"
+                    exit 1
+                fi
+            else
+                echo "Migration $migration_name already applied"
+            fi
+        fi
+    done
+    
+    echo "Database migrations completed"
+else
+    echo "No migration system found, running basic schema creation..."
+    python -c "
 from app import create_app
 from app.models import db
 app = create_app()
 with app.app_context():
-    # Add any migration logic here if needed
-    print('Database migrations completed')
+    db.create_all()
+    print('Basic schema creation completed')
 "
+fi
+
+# Start cron daemon for scheduled tasks
+echo "Starting cron daemon..."
+cron
 
 # Test external connections on startup (simplified for now)
 echo "Testing external API connections..."
