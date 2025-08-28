@@ -82,7 +82,7 @@ def create_app():
     @app.route('/wanted-scenes')
     def wanted_scenes():
         """Wanted scenes list"""
-        wanted = WantedScene.query.order_by(WantedScene.added_date.desc()).all()
+        wanted = WantedScene.query.order_by(WantedScene.release_date.desc().nullslast(), WantedScene.added_date.desc()).all()
         
         # Calculate scenes added in the last 7 days
         from datetime import datetime, timedelta

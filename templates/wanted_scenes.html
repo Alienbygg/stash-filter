@@ -125,7 +125,7 @@
 <div class="card">
     <div class="card-header">
         <i class="fas fa-list me-1"></i>
-        Wanted Scenes ({{ wanted_scenes|length }})
+        Wanted Scenes ({{ wanted_scenes|length }}) - <small class="text-muted">Sorted by newest release date</small>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -138,7 +138,7 @@
                         <th>Title</th>
                         <th>Performer</th>
                         <th>Studio</th>
-                        <th>Release Date</th>
+                        <th><strong>Release Date ↓</strong></th>
                         <th>Added</th>
                         <th>Status</th>
                         <th>Whisparr</th>
@@ -175,9 +175,9 @@
                                 <span class="text-muted">Unknown</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="fw-bold">
                             {% if wanted.release_date %}
-                                {{ wanted.release_date.strftime('%Y-%m-%d') }}
+                                <span class="text-primary">{{ wanted.release_date.strftime('%Y-%m-%d') }}</span>
                             {% else %}
                                 <span class="text-muted">Unknown</span>
                             {% endif %}
