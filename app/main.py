@@ -98,11 +98,11 @@ def create_app():
         """Settings page"""
         config = Config.get_config()
         
-        # Pass environment variables to template
+        # Pass environment variables to template - show actual values used by APIs
         env_vars = {
-            'stash_url': os.environ.get('STASH_URL', 'Not configured'),
-            'whisparr_url': os.environ.get('WHISPARR_URL', 'Not configured'),
-            'stashdb_url': os.environ.get('STASHDB_URL', 'Not configured')
+            'stash_url': os.environ.get('STASH_URL', 'http://10.11.12.70:6969'),
+            'whisparr_url': os.environ.get('WHISPARR_URL', 'http://10.11.12.77:6969'),
+            'stashdb_url': os.environ.get('STASHDB_URL', 'https://stashdb.org')
         }
         
         return render_template('settings.html', config=config, env_vars=env_vars)
