@@ -508,19 +508,21 @@ class StashDBAPI:
         return all_tags
     
     def test_connection(self) -> bool:
-        """Test connection to StashDB"""
+        """Test connection to StashDB using a working query"""
         query = '''
         query TestConnection {
-            version {
-                version
-                build_time
+            queryTags(input: {page: 1, per_page: 1}) {
+                count
             }
         }
         '''
         
         try:
-            self._make_request(query)
-            logger.info("StashDB connection test successful")
+            data = self._make_request(query)
+            # If we can query tags, the connection works
+            tag_data = data.get('queryTags', {})
+            count = tag_data.get('count', 0)
+            logger.info(f"StashDB connection test successful - {count} tags available")
             return True
         except Exception as e:
             logger.error(f"StashDB connection test failed: {str(e)}")
