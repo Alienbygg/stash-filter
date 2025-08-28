@@ -9,32 +9,24 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/Alienbygg/stash-filter/issues</Support>
   <Project>https://github.com/Alienbygg/stash-filter</Project>
-  <Overview>Stash-Filter automatically discovers new scenes for your favorite performers and studios. Integrates with Stash, StashDB, and Whisparr for comprehensive content management.&#xD;
+  <Overview>Stash-Filter automatically discovers new scenes for your favorite performers and studios from StashDB. Features professional web interface, smart filtering, and complete Whisparr integration for seamless content management.&#xD;
 &#xD;
-✨ NEW in v1.1.0: Filtered Scenes Manager&#xD;
-- See exactly what gets filtered and why&#xD;
-- Create exceptions to rescue wanted scenes&#xD;
-- Analytics dashboard with filtering insights&#xD;
-- Bulk operations for efficient management&#xD;
+🎯 **Key Features:**&#xD;
+• Daily automated content discovery from StashDB&#xD;
+• Smart filtering (duplicates, unwanted categories, duration)&#xD;
+• Manual performer/studio search and monitoring&#xD;
+• Trending scenes discovery with personal filters&#xD;
+• Professional responsive web interface&#xD;
+• Complete Whisparr integration for downloads&#xD;
+• Filtered scenes manager with exception handling&#xD;
+• SQLite database with health monitoring&#xD;
 &#xD;
-🎯 Core Features:&#xD;
-- Daily automated content discovery from StashDB&#xD;
-- Smart filtering (duplicates, unwanted tags, studios)&#xD;
-- Professional web interface with responsive design&#xD;
-- Complete Whisparr integration for downloads&#xD;
-- SQLite database with health monitoring&#xD;
-- Docker deployment with Unraid template&#xD;
-- Professional logging and error handling&#xD;
+🔧 **Requirements:**&#xD;
+• Stash server (local network access required)&#xD;
+• Optional: Whisparr for automatic downloads&#xD;
+• Optional: StashDB API key for enhanced features&#xD;
 &#xD;
-🔧 Perfect For:&#xD;
-- Stash users wanting automated content discovery&#xD;
-- Self-hosted media enthusiasts&#xD;
-- Users managing large adult content libraries&#xD;
-&#xD;
-📋 Requirements:&#xD;
-- Stash server (local network access)&#xD;
-- Optional: Whisparr for automatic downloads&#xD;
-- Optional: StashDB API key for enhanced features</Overview>
+⚡ **Perfect for Stash users wanting automated content discovery and management**</Overview>
   <Category>MediaApp:Video MediaServer:Video Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:5000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Alienbygg/stash-filter/main/unraid-template.xml</TemplateURL>
@@ -45,7 +37,7 @@
   <DateInstalled/>
   <DonateText>If you find Stash-Filter helpful, consider supporting development!</DonateText>
   <DonateLink>https://github.com/sponsors/Alienbygg</DonateLink>
-  <Requires>Stash server running and accessible on your local network. Stash must be configured with API access enabled. Optional but recommended: Whisparr for automatic downloads.</Requires>
+  <Requires>Stash server accessible on local network with API access enabled. Whisparr optional but recommended for automatic downloads.</Requires>
   
   <!-- Port Configuration -->
   <Config Name="WebUI Port" Target="5000" Default="5000" Mode="tcp" Description="Port for web interface access" Type="Port" Display="always" Required="true" Mask="false">5000</Config>
@@ -56,8 +48,8 @@
   <Config Name="Config" Target="/app/config" Default="/mnt/user/appdata/stash-filter/config" Mode="rw" Description="Configuration files directory" Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/appdata/stash-filter/config</Config>
   
   <!-- Required Environment Variables -->
-  <Config Name="Stash URL" Target="STASH_URL" Default="http://192.168.1.100:9999" Mode="" Description="Your Stash server URL (including port)" Type="Variable" Display="always" Required="true" Mask="false">http://192.168.1.100:9999</Config>
-  <Config Name="Stash API Key" Target="STASH_API_KEY" Default="" Mode="" Description="Stash API Key (found in Stash Settings -> Security)" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Stash URL" Target="STASH_URL" Default="http://192.168.1.100:9999" Mode="" Description="Your Stash server URL with port (e.g., http://192.168.1.100:9999)" Type="Variable" Display="always" Required="true" Mask="false">http://192.168.1.100:9999</Config>
+  <Config Name="Stash API Key" Target="STASH_API_KEY" Default="" Mode="" Description="Stash API Key from Settings → Security → API Key" Type="Variable" Display="always" Required="true" Mask="true"></Config>
   
   <!-- Optional Environment Variables -->
   <Config Name="Whisparr URL" Target="WHISPARR_URL" Default="" Mode="" Description="Whisparr server URL (optional, for automatic downloads)" Type="Variable" Display="always" Required="false" Mask="false"></Config>
