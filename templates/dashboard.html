@@ -99,6 +99,34 @@
     </div>
 </div>
 
+<!-- Trending Scenes -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-fire me-1"></i>
+                    Top 25 Trending Scenes (Filtered)
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshTrendingScenes()">
+                    <i class="fas fa-refresh"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="trendingLoading" style="display: none;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading trending scenes...</p>
+                    </div>
+                </div>
+                <div id="trendingScenes">
+                    <!-- Trending scenes will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Recent Activity -->
 <div class="row">
     <div class="col-lg-8">
@@ -215,6 +243,118 @@
 
 {% block scripts %}
 <script>
+    // Load trending scenes on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTrendingScenes();
+    });
+    
+    function loadTrendingScenes() {
+        document.getElementById('trendingLoading').style.display = 'block';
+        document.getElementById('trendingScenes').innerHTML = '';
+        
+        fetch('/api/get-trending-scenes')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('trendingLoading').style.display = 'none';
+            
+            if (data.status === 'success') {
+                displayTrendingScenes(data.scenes);
+            } else {
+                document.getElementById('trendingScenes').innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error loading trending scenes: ${data.message}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('trendingLoading').style.display = 'none';
+            document.getElementById('trendingScenes').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times-circle"></i>
+                    Failed to load trending scenes: ${error}
+                </div>
+            `;
+        });
+    }
+    
+    function displayTrendingScenes(scenes) {
+        const container = document.getElementById('trendingScenes');
+        
+        if (scenes.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <p>No trending scenes found. Check your StashDB connection.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Create responsive grid
+        let html = '<div class="row">';
+        
+        scenes.forEach((scene, index) => {
+            const performers = scene.performers.length > 0 ? scene.performers.slice(0, 2).join(', ') : 'Unknown';
+            const studio = scene.studio || 'Unknown';
+            const thumbnail = scene.thumbnail_url || '/static/stash-filter.png';
+            const duration = scene.duration ? `${Math.floor(scene.duration / 60)} min` : 'N/A';
+            
+            html += `
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                    <div class="card h-100 scene-card">
+                        <div class="position-relative">
+                            <img src="${thumbnail}" class="card-img-top scene-thumbnail" alt="Scene thumbnail" 
+                                 style="height: 160px; object-fit: cover;" 
+                                 onerror="this.src='/static/stash-filter.png'">
+                            <div class="position-absolute top-0 end-0 m-2">
+                                <span class="badge bg-dark">${duration}</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-2">
+                            <h6 class="card-title mb-1" style="font-size: 0.85rem; height: 2.4em; overflow: hidden;">
+                                ${scene.title.length > 50 ? scene.title.substring(0, 47) + '...' : scene.title}
+                            </h6>
+                            <p class="card-text mb-1">
+                                <small class="text-muted d-block" style="height: 1.2em; overflow: hidden;">
+                                    <i class="fas fa-user"></i> ${performers.length > 25 ? performers.substring(0, 22) + '...' : performers}
+                                </small>
+                                <small class="text-muted d-block" style="height: 1.2em; overflow: hidden;">
+                                    <i class="fas fa-building"></i> ${studio.length > 20 ? studio.substring(0, 17) + '...' : studio}
+                                </small>
+                            </p>
+                        </div>
+                        <div class="card-footer p-2">
+                            <div class="d-flex justify-content-between">
+                                <a href="${scene.stashdb_url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt"></i> View
+                                </a>
+                                <button class="btn btn-sm btn-outline-success" onclick="addSceneToWanted('${scene.stashdb_id}', '${scene.title.replace(/'/g, "\\'")}')"
+                                        title="Add to Wanted">
+                                    <i class="fas fa-heart"></i> Want
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    function refreshTrendingScenes() {
+        loadTrendingScenes();
+    }
+    
+    function addSceneToWanted(stashdbId, title) {
+        if (confirm(`Add "${title}" to your wanted list?`)) {
+            // This would need an API endpoint to add scenes to wanted list
+            alert('Add to wanted functionality will be implemented in a future update.');
+        }
+    }
     function syncFavorites() {
         // This function is already defined in base.html
         document.getElementById('sync-favorites').click();

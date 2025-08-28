@@ -176,41 +176,35 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addPerformerModalLabel">
-                    <i class="fas fa-search me-2"></i>Add Performer from StashDB
+                    <i class="fas fa-plus"></i> Add Performer
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label for="performerSearchInput" class="form-label">Search for Performer</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="performerSearchInput" 
-                               placeholder="Enter performer name..." onkeypress="if(event.key==='Enter') searchPerformers()">
-                        <button class="btn btn-primary" type="button" onclick="searchPerformers()">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="performerSearch" placeholder="Search for performer name...">
+                            <button class="btn btn-primary" type="button" id="searchPerformersBtn">
+                                <i class="fas fa-search"></i> Search StashDB
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
-                <div id="performerSearchResults" class="d-none">
-                    <h6>Search Results:</h6>
-                    <div id="performerResultsList" class="list-group">
+                <div id="searchResults" style="display: none;">
+                    <h6><i class="fas fa-search"></i> Search Results:</h6>
+                    <div id="resultsContainer" class="list-group">
                         <!-- Results will be populated here -->
                     </div>
                 </div>
                 
-                <div id="performerSearchLoading" class="d-none text-center py-3">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Searching StashDB...</p>
+                <div id="searchLoading" style="display: none;">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Searching StashDB...</p>
+                    </div>
                 </div>
-                
-                <div id="performerSearchEmpty" class="d-none text-center py-3">
-                    <i class="fas fa-user-slash fa-2x text-muted"></i>
-                    <p class="mt-2 text-muted">No performers found. Try a different search term.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             </div>
         </div>
     </div>
@@ -220,80 +214,88 @@
 
 {% block scripts %}
 <script>
-function showAddPerformerModal() {
-    // Reset modal state
-    document.getElementById('performerSearchInput').value = '';
-    document.getElementById('performerSearchResults').classList.add('d-none');
-    document.getElementById('performerSearchLoading').classList.add('d-none');
-    document.getElementById('performerSearchEmpty').classList.add('d-none');
-    
-    // Show modal
-    new bootstrap.Modal(document.getElementById('addPerformerModal')).show();
+function checkPerformer(performerId) {
+    // This would trigger a specific performer check
+    alert('Performer check functionality will be implemented in a future update.');
 }
 
-function searchPerformers() {
-    const searchTerm = document.getElementById('performerSearchInput').value.trim();
+function showAddPerformerModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addPerformerModal'));
+    modal.show();
+}
+
+// Performer search functionality
+document.getElementById('searchPerformersBtn').addEventListener('click', function() {
+    const searchTerm = document.getElementById('performerSearch').value.trim();
     
     if (!searchTerm) {
         alert('Please enter a performer name to search.');
         return;
     }
     
-    // Show loading state
-    document.getElementById('performerSearchResults').classList.add('d-none');
-    document.getElementById('performerSearchEmpty').classList.add('d-none');
-    document.getElementById('performerSearchLoading').classList.remove('d-none');
+    // Show loading
+    document.getElementById('searchLoading').style.display = 'block';
+    document.getElementById('searchResults').style.display = 'none';
     
+    // Search StashDB
     fetch('/api/search-performers', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            search_term: searchTerm
+            query: searchTerm
         })
     })
     .then(response => response.json())
     .then(data => {
-        document.getElementById('performerSearchLoading').classList.add('d-none');
+        document.getElementById('searchLoading').style.display = 'none';
         
-        if (data.status === 'success' && data.results.length > 0) {
-            displayPerformerResults(data.results);
+        if (data.status === 'success') {
+            displaySearchResults(data.results);
         } else {
-            document.getElementById('performerSearchEmpty').classList.remove('d-none');
+            alert('Error: ' + data.message);
         }
     })
     .catch(error => {
-        document.getElementById('performerSearchLoading').classList.add('d-none');
-        console.error('Error searching performers:', error);
-        alert('Error searching performers: ' + error.message);
+        document.getElementById('searchLoading').style.display = 'none';
+        alert('Error: ' + error);
     });
-}
+});
 
-function displayPerformerResults(results) {
-    const resultsList = document.getElementById('performerResultsList');
-    resultsList.innerHTML = '';
+function displaySearchResults(results) {
+    const container = document.getElementById('resultsContainer');
+    container.innerHTML = '';
     
-    results.forEach(performer => {
-        const listItem = document.createElement('div');
-        listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-        listItem.innerHTML = `
-            <div>
-                <h6 class="mb-1">${performer.name}</h6>
-                <small class="text-muted">StashDB ID: ${performer.id}</small>
-            </div>
-            <button class="btn btn-sm btn-success" onclick="addPerformer('${performer.id}', '${performer.name.replace(/'/g, "\\'")}')">                
-                <i class="fas fa-plus"></i> Add
-            </button>
-        `;
-        resultsList.appendChild(listItem);
-    });
+    if (results.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No performers found. Try a different search term.</div>';
+    } else {
+        results.forEach(performer => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+            resultItem.innerHTML = `
+                <div>
+                    <h6 class="mb-1">${performer.name}</h6>
+                    <small class="text-muted">StashDB ID: ${performer.stashdb_id}</small>
+                </div>
+                <div>
+                    <a href="${performer.stashdb_url}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                        <i class="fas fa-external-link-alt"></i> View on StashDB
+                    </a>
+                    <button class="btn btn-sm btn-success" onclick="addPerformer('${performer.stashdb_id}', '${performer.name}')">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+            `;
+            container.appendChild(resultItem);
+        });
+    }
     
-    document.getElementById('performerSearchResults').classList.remove('d-none');
+    document.getElementById('searchResults').style.display = 'block';
 }
 
 function addPerformer(stashdbId, name) {
-    if (confirm(`Add performer "${name}" to monitoring list?`)) {
+    if (confirm(`Add ${name} to your monitoring list?`)) {
         fetch('/api/add-performer', {
             method: 'POST',
             headers: {
@@ -307,23 +309,24 @@ function addPerformer(stashdbId, name) {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                bootstrap.Modal.getInstance(document.getElementById('addPerformerModal')).hide();
-                location.reload(); // Refresh to show new performer
+                alert('Performer added successfully!');
+                location.reload();
             } else {
                 alert('Error: ' + data.message);
             }
         })
         .catch(error => {
-            console.error('Error adding performer:', error);
-            alert('Error adding performer: ' + error.message);
+            alert('Error: ' + error);
         });
     }
 }
 
-function checkPerformer(performerId) {
-    // This would trigger a specific performer check
-    alert('Performer check functionality will be implemented in a future update.');
-}
+// Allow Enter key to trigger search
+document.getElementById('performerSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('searchPerformersBtn').click();
+    }
+});
 
 // Bind sync favorites to empty state button
 document.addEventListener('DOMContentLoaded', function() {

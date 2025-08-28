@@ -9,7 +9,7 @@ class Performer(db.Model):
     __tablename__ = 'performers'
     
     id = db.Column(db.Integer, primary_key=True)
-    stash_id = db.Column(db.String(50), unique=True, nullable=False)
+    stash_id = db.Column(db.String(50), unique=False, nullable=True)  # Can be null for manual additions
     stashdb_id = db.Column(db.String(50), unique=True, nullable=True)
     name = db.Column(db.String(200), nullable=False)
     aliases = db.Column(db.Text)  # JSON string of aliases
@@ -41,7 +41,7 @@ class Studio(db.Model):
     __tablename__ = 'studios'
     
     id = db.Column(db.Integer, primary_key=True)
-    stash_id = db.Column(db.String(50), unique=True, nullable=False)
+    stash_id = db.Column(db.String(50), unique=False, nullable=True)  # Can be null for manual additions
     stashdb_id = db.Column(db.String(50), unique=True, nullable=True)
     name = db.Column(db.String(200), nullable=False)
     parent_studio = db.Column(db.String(200), nullable=True)

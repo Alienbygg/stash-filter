@@ -305,3 +305,74 @@
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
+
+/* Scene Cards for Trending Scenes */
+.scene-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.scene-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.scene-thumbnail {
+  border-radius: 0;
+  transition: transform 0.3s ease;
+}
+
+.scene-card:hover .scene-thumbnail {
+  transform: scale(1.05);
+}
+
+.scene-card .card-footer {
+  background-color: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid rgba(0, 0, 0, 0.125);
+  padding: 0.5rem;
+}
+
+.scene-card .card-title {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.scene-card .btn-sm {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+}
+
+/* Trending scenes container */
+#trendingScenes .row {
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+#trendingScenes .row > div {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+/* Badge overlays */
+.position-absolute .badge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Responsive adjustments for scene cards */
+@media (max-width: 576px) {
+  .scene-card .card-body {
+    padding: 1rem;
+  }
+  
+  .scene-card .card-title {
+    font-size: 0.9rem;
+  }
+  
+  .scene-card .btn-sm {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+}

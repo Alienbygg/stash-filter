@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 # Import custom modules
-from .models import db, Performer, Studio, Scene, WantedScene, Config, FilteredScene, FilterException
+from .models import db, Performer, Studio, Scene, WantedScene, Config
 from .stash_api import StashAPI
 from .stashdb_api import StashDBAPI
 from .whisparr_api import WhisparrAPI
@@ -82,7 +82,7 @@ def create_app():
     @app.route('/wanted-scenes')
     def wanted_scenes():
         """Wanted scenes list"""
-        wanted = WantedScene.query.order_by(WantedScene.release_date.desc().nullslast(), WantedScene.added_date.desc()).all()
+        wanted = WantedScene.query.order_by(WantedScene.added_date.desc()).all()
         
         # Calculate scenes added in the last 7 days
         from datetime import datetime, timedelta
@@ -93,39 +93,16 @@ def create_app():
                              wanted_scenes=wanted, 
                              this_week_count=this_week_count)
     
-    @app.route('/filtered-scenes')
-    def filtered_scenes():
-        """Filtered scenes list"""
-        filtered = FilteredScene.query.order_by(FilteredScene.filtered_date.desc()).all()
-        
-        # Calculate scenes filtered in the last 7 days
-        from datetime import datetime, timedelta
-        week_ago = datetime.utcnow() - timedelta(days=7)
-        this_week_count = FilteredScene.query.filter(FilteredScene.filtered_date >= week_ago).count()
-        
-        # Group by filter reason for stats
-        filter_reasons = {}
-        for scene in filtered:
-            reason = scene.filter_reason
-            if reason not in filter_reasons:
-                filter_reasons[reason] = 0
-            filter_reasons[reason] += 1
-        
-        return render_template('filtered_scenes.html', 
-                             filtered_scenes=filtered,
-                             this_week_count=this_week_count,
-                             filter_reasons=filter_reasons)
-    
     @app.route('/settings')
     def settings():
         """Settings page"""
         config = Config.get_config()
         
-        # Pass environment variables to template - show actual values used by APIs
+        # Pass environment variables to template
         env_vars = {
-            'stash_url': os.environ.get('STASH_URL', 'http://10.11.12.70:6969'),
-            'whisparr_url': os.environ.get('WHISPARR_URL', 'http://10.11.12.77:6969'),
-            'stashdb_url': os.environ.get('STASHDB_URL', 'https://stashdb.org')
+            'stash_url': os.environ.get('STASH_URL', 'Not configured'),
+            'whisparr_url': os.environ.get('WHISPARR_URL', 'Not configured'),
+            'stashdb_url': os.environ.get('STASHDB_URL', 'Not configured')
         }
         
         return render_template('settings.html', config=config, env_vars=env_vars)
@@ -245,6 +222,131 @@ def create_app():
             
         except Exception as e:
             app.logger.error(f"Error testing connections: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/search-performers', methods=['POST'])
+    def search_performers():
+        """Search for performers in StashDB"""
+        try:
+            data = request.json
+            search_term = data.get('query', '').strip()
+            
+            if not search_term:
+                return jsonify({'status': 'error', 'message': 'Search term required'}), 400
+            
+            # Search StashDB for performers
+            results = stashdb_api.search_performer(search_term)
+            
+            # Format results for frontend
+            formatted_results = []
+            for performer in results:
+                formatted_results.append({
+                    'stashdb_id': performer.get('id'),
+                    'name': performer.get('name'),
+                    'stashdb_url': f"https://stashdb.org/performers/{performer.get('id')}"
+                })
+            
+            return jsonify({
+                'status': 'success',
+                'results': formatted_results,
+                'count': len(formatted_results)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error searching performers: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/add-performer', methods=['POST'])
+    def add_performer():
+        """Add a performer to monitoring list"""
+        try:
+            data = request.json
+            stashdb_id = data.get('stashdb_id')
+            name = data.get('name')
+            
+            if not stashdb_id or not name:
+                return jsonify({'status': 'error', 'message': 'StashDB ID and name required'}), 400
+            
+            # Check if performer already exists
+            existing = Performer.query.filter_by(stashdb_id=stashdb_id).first()
+            if existing:
+                return jsonify({'status': 'error', 'message': 'Performer already exists'}), 400
+            
+            # Create new performer
+            performer = Performer(
+                stashdb_id=stashdb_id,
+                name=name,
+                monitored=True,
+                stash_id=None  # Will be null for StashDB additions
+            )
+            
+            db.session.add(performer)
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Added {name} to monitoring list',
+                'performer_id': performer.id
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error adding performer: {str(e)}")
+            db.session.rollback()
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/get-trending-scenes', methods=['GET'])
+    def get_trending_scenes():
+        """Get trending scenes from StashDB with thumbnails"""
+        try:
+            # Get recent scenes from StashDB
+            result = stashdb_api.get_recent_scenes(days=7, page=1)
+            scenes = result.get('scenes', [])
+            
+            # Format scenes with thumbnail data
+            formatted_scenes = []
+            for scene in scenes[:25]:  # Limit to top 25
+                # Get the best thumbnail
+                thumbnail_url = None
+                images = scene.get('images', [])
+                if images:
+                    # Sort by size and pick the best one
+                    sorted_images = sorted(images, key=lambda x: (x.get('width', 0) * x.get('height', 0)), reverse=True)
+                    if sorted_images:
+                        thumbnail_url = sorted_images[0].get('url')
+                
+                # Get performer names
+                performer_names = []
+                performers = scene.get('performers', [])
+                for perf in performers:
+                    performer_data = perf.get('performer', {})
+                    if performer_data.get('name'):
+                        performer_names.append(performer_data['name'])
+                
+                # Get studio name
+                studio_name = None
+                studio = scene.get('studio', {})
+                if studio:
+                    studio_name = studio.get('name')
+                
+                formatted_scenes.append({
+                    'stashdb_id': scene.get('id'),
+                    'title': scene.get('title', 'Unknown Title'),
+                    'performers': performer_names,
+                    'studio': studio_name,
+                    'release_date': scene.get('date'),
+                    'duration': scene.get('duration'),
+                    'thumbnail_url': thumbnail_url,
+                    'stashdb_url': f"https://stashdb.org/scenes/{scene.get('id')}"
+                })
+            
+            return jsonify({
+                'status': 'success',
+                'scenes': formatted_scenes,
+                'count': len(formatted_scenes)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error getting trending scenes: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
     
     @app.route('/api/add-to-whisparr', methods=['POST'])
@@ -415,186 +517,6 @@ def create_app():
             app.logger.error(f"Error refreshing Whisparr status: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
     
-    @app.route('/api/search-performers', methods=['POST'])
-    def search_performers():
-        """Search for performers in StashDB"""
-        try:
-            data = request.json
-            search_term = data.get('search_term', '').strip()
-            
-            if not search_term:
-                return jsonify({'status': 'error', 'message': 'Search term is required'}), 400
-            
-            results = stashdb_api.search_performer(search_term)
-            return jsonify({
-                'status': 'success',
-                'results': results,
-                'count': len(results)
-            })
-            
-        except Exception as e:
-            app.logger.error(f"Error searching performers: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/add-performer', methods=['POST'])
-    def add_performer():
-        """Add a performer from StashDB search results"""
-        try:
-            data = request.json
-            stashdb_id = data.get('stashdb_id')
-            name = data.get('name')
-            
-            if not stashdb_id or not name:
-                return jsonify({'status': 'error', 'message': 'StashDB ID and name are required'}), 400
-            
-            # Check if performer already exists
-            existing = Performer.query.filter_by(stashdb_id=stashdb_id).first()
-            if existing:
-                return jsonify({'status': 'error', 'message': f'Performer "{name}" is already being monitored'}), 400
-            
-            # Create new performer
-            performer = Performer(
-                stash_id=None,  # No Stash ID since it's manual
-                stashdb_id=stashdb_id,
-                name=name,
-                monitored=True
-            )
-            
-            db.session.add(performer)
-            db.session.commit()
-            
-            return jsonify({
-                'status': 'success',
-                'message': f'Added performer "{name}" to monitoring list',
-                'performer': {
-                    'id': performer.id,
-                    'name': performer.name,
-                    'stashdb_id': performer.stashdb_id
-                }
-            })
-            
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error adding performer: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/search-studios', methods=['POST'])
-    def search_studios():
-        """Search for studios in StashDB"""
-        try:
-            data = request.json
-            search_term = data.get('search_term', '').strip()
-            
-            if not search_term:
-                return jsonify({'status': 'error', 'message': 'Search term is required'}), 400
-            
-            results = stashdb_api.search_studio(search_term)
-            return jsonify({
-                'status': 'success',
-                'results': results,
-                'count': len(results)
-            })
-            
-        except Exception as e:
-            app.logger.error(f"Error searching studios: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/add-studio', methods=['POST'])
-    def add_studio():
-        """Add a studio from StashDB search results"""
-        try:
-            data = request.json
-            stashdb_id = data.get('stashdb_id')
-            name = data.get('name')
-            
-            if not stashdb_id or not name:
-                return jsonify({'status': 'error', 'message': 'StashDB ID and name are required'}), 400
-            
-            # Check if studio already exists
-            existing = Studio.query.filter_by(stashdb_id=stashdb_id).first()
-            if existing:
-                return jsonify({'status': 'error', 'message': f'Studio "{name}" is already being monitored'}), 400
-            
-            # Create new studio
-            studio = Studio(
-                stash_id=None,  # No Stash ID since it's manual
-                stashdb_id=stashdb_id,
-                name=name,
-                monitored=True
-            )
-            
-            db.session.add(studio)
-            db.session.commit()
-            
-            return jsonify({
-                'status': 'success',
-                'message': f'Added studio "{name}" to monitoring list',
-                'studio': {
-                    'id': studio.id,
-                    'name': studio.name,
-                    'stashdb_id': studio.stashdb_id
-                }
-            })
-            
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error adding studio: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/trending-scenes', methods=['POST'])
-    def get_trending_scenes():
-        """Get trending scenes from StashDB filtered by user preferences"""
-        try:
-            config = Config.get_config()
-            
-            # Get recent scenes (this acts as our "trending" since StashDB doesn't have trending API)
-            scenes_result = stashdb_api.get_recent_scenes(days=30, page=1)
-            scenes = scenes_result.get('scenes', [])
-            
-            if not scenes:
-                return jsonify({
-                    'status': 'success',
-                    'scenes': [],
-                    'message': 'No trending scenes found'
-                })
-            
-            # Apply user filters to scenes
-            from .discovery import apply_filters
-            filtered_scenes = []
-            
-            for scene_data in scenes:
-                # Apply the same filters as discovery
-                is_filtered, filter_reason = apply_filters(scene_data, config)
-                
-                if not is_filtered:
-                    # Scene passed filters, add to results
-                    filtered_scenes.append({
-                        'id': scene_data.get('id'),
-                        'title': scene_data.get('title'),
-                        'studio': scene_data.get('studio', {}).get('name', 'Unknown'),
-                        'performers': [p.get('performer', {}).get('name', '') for p in scene_data.get('performers', [])],
-                        'release_date': scene_data.get('date'),
-                        'duration': scene_data.get('duration'),
-                        'stashdb_url': f"{stashdb_api.base_url}/scenes/{scene_data.get('id')}",
-                        'tags': [tag.get('name', '') for tag in scene_data.get('tags', [])]
-                    })
-                
-                # Limit to top 25
-                if len(filtered_scenes) >= 25:
-                    break
-            
-            return jsonify({
-                'status': 'success',
-                'scenes': filtered_scenes,
-                'total_found': len(scenes),
-                'after_filters': len(filtered_scenes),
-                'message': f'Found {len(filtered_scenes)} trending scenes that pass your filters'
-            })
-            
-        except Exception as e:
-            app.logger.error(f"Error getting trending scenes: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
     @app.route('/api/get-stashdb-tags', methods=['GET'])
     def get_stashdb_tags():
         """Get all available tags from StashDB for category filtering"""
@@ -651,152 +573,6 @@ def create_app():
             app.logger.error(f"Error cleaning up duplicates: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
     
-    @app.route('/api/create-filter-exception', methods=['POST'])
-    def create_filter_exception():
-        """Create an exception for a filtered scene"""
-        try:
-            data = request.json
-            filtered_scene_id = data.get('filtered_scene_id')
-            exception_type = data.get('exception_type', 'permanent')  # permanent, temporary
-            reason = data.get('reason', 'User exception')
-            auto_add_to_whisparr = data.get('auto_add_to_whisparr', False)
-            expires_hours = data.get('expires_hours')  # for temporary exceptions
-            
-            filtered_scene = FilteredScene.query.get(filtered_scene_id)
-            if not filtered_scene:
-                return jsonify({'status': 'error', 'message': 'Filtered scene not found'}), 404
-            
-            # Check if exception already exists
-            existing = FilterException.query.filter_by(
-                filtered_scene_id=filtered_scene_id,
-                is_active=True
-            ).first()
-            
-            if existing:
-                return jsonify({'status': 'error', 'message': 'Exception already exists for this scene'}), 400
-            
-            # Set expiration for temporary exceptions
-            expires_at = None
-            if exception_type == 'temporary' and expires_hours:
-                from datetime import datetime, timedelta
-                expires_at = datetime.utcnow() + timedelta(hours=int(expires_hours))
-            
-            # Create the exception
-            exception = FilterException(
-                filtered_scene_id=filtered_scene_id,
-                exception_type=exception_type,
-                reason=reason,
-                expires_at=expires_at,
-                auto_add_to_whisparr=auto_add_to_whisparr
-            )
-            
-            db.session.add(exception)
-            
-            # Mark the filtered scene as having an exception
-            filtered_scene.is_exception = True
-            filtered_scene.exception_date = datetime.utcnow()
-            filtered_scene.exception_reason = reason
-            
-            # If auto-add to whisparr is enabled, create wanted scene
-            if auto_add_to_whisparr and filtered_scene.stashdb_id:
-                # Create a Scene record first
-                scene = Scene(
-                    stashdb_id=filtered_scene.stashdb_id,
-                    title=filtered_scene.title,
-                    release_date=filtered_scene.release_date,
-                    duration=filtered_scene.duration,
-                    is_wanted=True
-                )
-                scene.set_tags(filtered_scene.get_tags())
-                db.session.add(scene)
-                db.session.flush()  # Get the scene ID
-                
-                # Create WantedScene entry
-                wanted = WantedScene(
-                    scene_id=scene.id,
-                    title=filtered_scene.title,
-                    studio_name=filtered_scene.studio,
-                    release_date=filtered_scene.release_date,
-                    status='wanted'
-                )
-                
-                performers = filtered_scene.get_performers()
-                if performers:
-                    wanted.performer_name = ', '.join(performers[:3])  # First 3 performers
-                
-                db.session.add(wanted)
-            
-            db.session.commit()
-            
-            return jsonify({
-                'status': 'success',
-                'message': 'Exception created successfully',
-                'exception_id': exception.id,
-                'auto_added': auto_add_to_whisparr
-            })
-            
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error creating filter exception: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/remove-filter-exception', methods=['DELETE'])
-    def remove_filter_exception():
-        """Remove a filter exception"""
-        try:
-            data = request.json
-            exception_id = data.get('exception_id')
-            
-            exception = FilterException.query.get(exception_id)
-            if not exception:
-                return jsonify({'status': 'error', 'message': 'Exception not found'}), 404
-            
-            # Update the filtered scene
-            filtered_scene = exception.filtered_scene
-            filtered_scene.is_exception = False
-            filtered_scene.exception_date = None
-            filtered_scene.exception_reason = None
-            
-            # Remove the exception
-            db.session.delete(exception)
-            db.session.commit()
-            
-            return jsonify({'status': 'success', 'message': 'Exception removed successfully'})
-            
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error removing filter exception: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/clear-old-filtered-scenes', methods=['POST'])
-    def clear_old_filtered_scenes():
-        """Clear old filtered scenes (older than specified days)"""
-        try:
-            data = request.json
-            days = data.get('days', 30)  # Default 30 days
-            
-            from datetime import datetime, timedelta
-            cutoff_date = datetime.utcnow() - timedelta(days=int(days))
-            
-            # Delete old filtered scenes without exceptions
-            deleted = FilteredScene.query.filter(
-                FilteredScene.filtered_date < cutoff_date,
-                FilteredScene.is_exception == False
-            ).delete()
-            
-            db.session.commit()
-            
-            return jsonify({
-                'status': 'success',
-                'message': f'Cleared {deleted} old filtered scenes',
-                'deleted_count': deleted
-            })
-            
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error clearing old filtered scenes: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
     @app.route('/whisparr-movie/<int:id>')
     def whisparr_movie(id):
         """Redirect to Whisparr movie page"""
@@ -820,7 +596,7 @@ def create_app():
     
     # Initialize database tables
     with app.app_context():
-        db.create_all()  # Don't recreate existing tables (checkfirst is now default)
+        db.create_all()
         
         # Create default config if not exists
         if not Config.query.first():
