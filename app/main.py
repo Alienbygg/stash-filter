@@ -415,6 +415,186 @@ def create_app():
             app.logger.error(f"Error refreshing Whisparr status: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
     
+    @app.route('/api/search-performers', methods=['POST'])
+    def search_performers():
+        """Search for performers in StashDB"""
+        try:
+            data = request.json
+            search_term = data.get('search_term', '').strip()
+            
+            if not search_term:
+                return jsonify({'status': 'error', 'message': 'Search term is required'}), 400
+            
+            results = stashdb_api.search_performer(search_term)
+            return jsonify({
+                'status': 'success',
+                'results': results,
+                'count': len(results)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error searching performers: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/add-performer', methods=['POST'])
+    def add_performer():
+        """Add a performer from StashDB search results"""
+        try:
+            data = request.json
+            stashdb_id = data.get('stashdb_id')
+            name = data.get('name')
+            
+            if not stashdb_id or not name:
+                return jsonify({'status': 'error', 'message': 'StashDB ID and name are required'}), 400
+            
+            # Check if performer already exists
+            existing = Performer.query.filter_by(stashdb_id=stashdb_id).first()
+            if existing:
+                return jsonify({'status': 'error', 'message': f'Performer "{name}" is already being monitored'}), 400
+            
+            # Create new performer
+            performer = Performer(
+                stash_id=None,  # No Stash ID since it's manual
+                stashdb_id=stashdb_id,
+                name=name,
+                monitored=True
+            )
+            
+            db.session.add(performer)
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Added performer "{name}" to monitoring list',
+                'performer': {
+                    'id': performer.id,
+                    'name': performer.name,
+                    'stashdb_id': performer.stashdb_id
+                }
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error adding performer: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/search-studios', methods=['POST'])
+    def search_studios():
+        """Search for studios in StashDB"""
+        try:
+            data = request.json
+            search_term = data.get('search_term', '').strip()
+            
+            if not search_term:
+                return jsonify({'status': 'error', 'message': 'Search term is required'}), 400
+            
+            results = stashdb_api.search_studio(search_term)
+            return jsonify({
+                'status': 'success',
+                'results': results,
+                'count': len(results)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error searching studios: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/add-studio', methods=['POST'])
+    def add_studio():
+        """Add a studio from StashDB search results"""
+        try:
+            data = request.json
+            stashdb_id = data.get('stashdb_id')
+            name = data.get('name')
+            
+            if not stashdb_id or not name:
+                return jsonify({'status': 'error', 'message': 'StashDB ID and name are required'}), 400
+            
+            # Check if studio already exists
+            existing = Studio.query.filter_by(stashdb_id=stashdb_id).first()
+            if existing:
+                return jsonify({'status': 'error', 'message': f'Studio "{name}" is already being monitored'}), 400
+            
+            # Create new studio
+            studio = Studio(
+                stash_id=None,  # No Stash ID since it's manual
+                stashdb_id=stashdb_id,
+                name=name,
+                monitored=True
+            )
+            
+            db.session.add(studio)
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Added studio "{name}" to monitoring list',
+                'studio': {
+                    'id': studio.id,
+                    'name': studio.name,
+                    'stashdb_id': studio.stashdb_id
+                }
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error adding studio: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/trending-scenes', methods=['POST'])
+    def get_trending_scenes():
+        """Get trending scenes from StashDB filtered by user preferences"""
+        try:
+            config = Config.get_config()
+            
+            # Get recent scenes (this acts as our "trending" since StashDB doesn't have trending API)
+            scenes_result = stashdb_api.get_recent_scenes(days=30, page=1)
+            scenes = scenes_result.get('scenes', [])
+            
+            if not scenes:
+                return jsonify({
+                    'status': 'success',
+                    'scenes': [],
+                    'message': 'No trending scenes found'
+                })
+            
+            # Apply user filters to scenes
+            from .discovery import apply_filters
+            filtered_scenes = []
+            
+            for scene_data in scenes:
+                # Apply the same filters as discovery
+                is_filtered, filter_reason = apply_filters(scene_data, config)
+                
+                if not is_filtered:
+                    # Scene passed filters, add to results
+                    filtered_scenes.append({
+                        'id': scene_data.get('id'),
+                        'title': scene_data.get('title'),
+                        'studio': scene_data.get('studio', {}).get('name', 'Unknown'),
+                        'performers': [p.get('performer', {}).get('name', '') for p in scene_data.get('performers', [])],
+                        'release_date': scene_data.get('date'),
+                        'duration': scene_data.get('duration'),
+                        'stashdb_url': f"{stashdb_api.base_url}/scenes/{scene_data.get('id')}",
+                        'tags': [tag.get('name', '') for tag in scene_data.get('tags', [])]
+                    })
+                
+                # Limit to top 25
+                if len(filtered_scenes) >= 25:
+                    break
+            
+            return jsonify({
+                'status': 'success',
+                'scenes': filtered_scenes,
+                'total_found': len(scenes),
+                'after_filters': len(filtered_scenes),
+                'message': f'Found {len(filtered_scenes)} trending scenes that pass your filters'
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error getting trending scenes: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
     @app.route('/api/get-stashdb-tags', methods=['GET'])
     def get_stashdb_tags():
         """Get all available tags from StashDB for category filtering"""
