@@ -2,49 +2,6 @@
 
 {% block title %}Wanted Scenes - Stash-Filter{% endblock %}
 
-<!-- Trending Scenes Modal -->
-<div class="modal fade" id="trendingScenesModal" tabindex="-1" aria-labelledby="trendingScenesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="trendingScenesModalLabel">
-                    <i class="fas fa-fire me-2"></i>Top 25 Trending Scenes (Filtered)
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="trendingLoading" class="d-none text-center py-5">
-                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-                    <p class="h5">Finding trending scenes...</p>
-                    <p class="text-muted">Applying your filters</p>
-                </div>
-                
-                <div id="trendingResults" class="d-none">
-                    <div class="alert alert-info mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Filtered Results:</strong> These scenes pass your current category and duration filters.
-                    </div>
-                    <div id="trendingScenesList">
-                        <!-- Results will be populated here -->
-                    </div>
-                </div>
-                
-                <div id="trendingEmpty" class="d-none text-center py-5">
-                    <i class="fas fa-sad-tear fa-3x text-muted mb-3"></i>
-                    <p class="h5">No Trending Scenes Found</p>
-                    <p class="text-muted">No recent scenes pass your current filters. Try adjusting your category filters.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="addTrendingToWanted()">
-                    <i class="fas fa-heart"></i> Add Selected to Wanted
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Wanted Scenes</h1>
@@ -294,6 +251,49 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Trending Scenes Modal -->
+<div class="modal fade" id="trendingScenesModal" tabindex="-1" aria-labelledby="trendingScenesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="trendingScenesModalLabel">
+                    <i class="fas fa-fire me-2"></i>Top 25 Trending Scenes (Filtered)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="trendingLoading" class="d-none text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <p class="h5">Finding trending scenes...</p>
+                    <p class="text-muted">Applying your filters</p>
+                </div>
+                
+                <div id="trendingResults" class="d-none">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Filtered Results:</strong> These scenes pass your current category and duration filters.
+                    </div>
+                    <div id="trendingScenesList">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+                
+                <div id="trendingEmpty" class="d-none text-center py-5">
+                    <i class="fas fa-sad-tear fa-3x text-muted mb-3"></i>
+                    <p class="h5">No Trending Scenes Found</p>
+                    <p class="text-muted">No recent scenes pass your current filters. Try adjusting your category filters.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="addTrendingToWanted()">
+                    <i class="fas fa-heart"></i> Add Selected to Wanted
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 

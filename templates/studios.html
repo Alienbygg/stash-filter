@@ -2,52 +2,6 @@
 
 {% block title %}Studios - Stash-Filter{% endblock %}
 
-<!-- Add Studio Modal -->
-<div class="modal fade" id="addStudioModal" tabindex="-1" aria-labelledby="addStudioModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addStudioModalLabel">
-                    <i class="fas fa-search me-2"></i>Add Studio from StashDB
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="studioSearchInput" class="form-label">Search for Studio</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="studioSearchInput" 
-                               placeholder="Enter studio name..." onkeypress="if(event.key==='Enter') searchStudios()">
-                        <button class="btn btn-primary" type="button" onclick="searchStudios()">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="studioSearchResults" class="d-none">
-                    <h6>Search Results:</h6>
-                    <div id="studioResultsList" class="list-group">
-                        <!-- Results will be populated here -->
-                    </div>
-                </div>
-                
-                <div id="studioSearchLoading" class="d-none text-center py-3">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Searching StashDB...</p>
-                </div>
-                
-                <div id="studioSearchEmpty" class="d-none text-center py-3">
-                    <i class="fas fa-building-slash fa-2x text-muted"></i>
-                    <p class="mt-2 text-muted">No studios found. Try a different search term.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Monitored Studios</h1>
@@ -272,6 +226,52 @@
                         <p class="text-muted">No recent activity. Run discovery to check for new content!</p>
                     </div>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Studio Modal -->
+<div class="modal fade" id="addStudioModal" tabindex="-1" aria-labelledby="addStudioModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addStudioModalLabel">
+                    <i class="fas fa-search me-2"></i>Add Studio from StashDB
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="studioSearchInput" class="form-label">Search for Studio</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="studioSearchInput" 
+                               placeholder="Enter studio name..." onkeypress="if(event.key==='Enter') searchStudios()">
+                        <button class="btn btn-primary" type="button" onclick="searchStudios()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="studioSearchResults" class="d-none">
+                    <h6>Search Results:</h6>
+                    <div id="studioResultsList" class="list-group">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+                
+                <div id="studioSearchLoading" class="d-none text-center py-3">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Searching StashDB...</p>
+                </div>
+                
+                <div id="studioSearchEmpty" class="d-none text-center py-3">
+                    <i class="fas fa-building-slash fa-2x text-muted"></i>
+                    <p class="mt-2 text-muted">No studios found. Try a different search term.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             </div>
         </div>
     </div>
