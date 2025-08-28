@@ -37,8 +37,15 @@ def run_discovery_task() -> Dict:
         
         logger.info(f"Monitoring {len(monitored_performers)} performers and {len(monitored_studios)} studios")
         
-        # Process performers - check multiple pages for each
+        # Process performers - limit to prevent timeouts
+        performers_processed = 0
+        max_performers_per_run = 10  # Limit to prevent worker timeout
+        
         for performer in monitored_performers:
+            if performers_processed >= max_performers_per_run:
+                logger.info(f"Reached performer limit ({max_performers_per_run}) for this run")
+                break
+                
             try:
                 performer_results = process_performer_scenes(performer, stashdb_api, stash_api, config)
                 results['new_scenes'] += performer_results['new_scenes']
@@ -46,16 +53,29 @@ def run_discovery_task() -> Dict:
                 
                 # Update last checked time
                 performer.last_checked = datetime.utcnow()
+                performers_processed += 1
                 
                 logger.info(f"Processed {performer.name}: {performer_results['new_scenes']} new, {performer_results['filtered_scenes']} filtered")
+                
+                # Commit progress periodically to prevent data loss
+                if performers_processed % 5 == 0:
+                    db.session.commit()
+                    logger.info(f"Committed progress after {performers_processed} performers")
                 
             except Exception as e:
                 error_msg = f"Error processing performer {performer.name}: {str(e)}"
                 logger.error(error_msg)
                 results['errors'].append(error_msg)
         
-        # Process studios - check multiple pages for each
+        # Process studios - limit to prevent timeouts
+        studios_processed = 0
+        max_studios_per_run = 5  # Studios have more scenes, so process fewer
+        
         for studio in monitored_studios:
+            if studios_processed >= max_studios_per_run:
+                logger.info(f"Reached studio limit ({max_studios_per_run}) for this run")
+                break
+                
             try:
                 studio_results = process_studio_scenes(studio, stashdb_api, stash_api, config)
                 results['new_scenes'] += studio_results['new_scenes']
@@ -63,8 +83,13 @@ def run_discovery_task() -> Dict:
                 
                 # Update last checked time
                 studio.last_checked = datetime.utcnow()
+                studios_processed += 1
                 
                 logger.info(f"Processed {studio.name}: {studio_results['new_scenes']} new, {studio_results['filtered_scenes']} filtered")
+                
+                # Commit progress after each studio due to large number of scenes
+                db.session.commit()
+                logger.info(f"Committed progress after studio {studio.name}")
                 
             except Exception as e:
                 error_msg = f"Error processing studio {studio.name}: {str(e)}"
@@ -121,7 +146,7 @@ def process_performer_scenes(performer: Performer, stashdb_api: StashDBAPI, stas
         
         # Get ALL scenes for this performer from StashDB - comprehensive approach
         try:
-            max_pages = 20  # Get up to 1000 scenes (20 pages × 50 scenes)
+            max_pages = 5  # Reduced to prevent timeout - get up to 250 scenes per run
             all_scenes_processed = 0
             
             for page_num in range(1, max_pages + 1):
@@ -205,7 +230,7 @@ def process_studio_scenes(studio: Studio, stashdb_api: StashDBAPI, stash_api: St
         
         # Get ALL scenes for this studio from StashDB - comprehensive approach
         try:
-            max_pages = 50  # Studios can have many scenes - get up to 2500 scenes
+            max_pages = 10  # Reduced to prevent timeout - get up to 500 scenes per run
             all_scenes_processed = 0
             
             for page_num in range(1, max_pages + 1):

@@ -34,6 +34,7 @@ def setup_scheduler():
     try:
         scheduler.start()
         logger.info("Scheduler started successfully")
+        # Only log to database if we have app context
         log_message("INFO", "Scheduler started successfully", "scheduler")
     except Exception as e:
         logger.error(f"Failed to start scheduler: {str(e)}")
@@ -120,16 +121,24 @@ def manual_discovery():
 def log_message(level: str, message: str, module: str = None):
     """Log a message to the database"""
     try:
-        log_entry = LogEntry(
-            level=level,
-            message=message,
-            module=module,
-            timestamp=datetime.utcnow()
-        )
-        db.session.add(log_entry)
-        db.session.commit()
+        from flask import has_app_context
+        if has_app_context():
+            from .models import LogEntry
+            log_entry = LogEntry(
+                level=level,
+                message=message,
+                module=module,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(log_entry)
+            db.session.commit()
+        else:
+            # Fall back to regular logging when no app context
+            logger.info(f"[{level}] {module}: {message}")
     except Exception as e:
         logger.error(f"Failed to log message to database: {str(e)}")
+        # Fall back to regular logging
+        logger.info(f"[{level}] {module}: {message}")
 
 # Standalone script for cron execution
 if __name__ == "__main__":

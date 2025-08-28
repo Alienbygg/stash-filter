@@ -97,5 +97,5 @@ if [ "${FLASK_ENV}" = "development" ]; then
     python -m flask run --host=0.0.0.0 --port=5000
 else
     echo "Running in production mode..."
-    gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 60 wsgi:app
+    gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 300 --graceful-timeout 300 wsgi:app
 fi
