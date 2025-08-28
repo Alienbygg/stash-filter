@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 # Import custom modules
-from .models import db, Performer, Studio, Scene, WantedScene, Config
+from .models import db, Performer, Studio, Scene, WantedScene, Config, FilteredScene, FilterException
 from .stash_api import StashAPI
 from .stashdb_api import StashDBAPI
 from .whisparr_api import WhisparrAPI
@@ -92,6 +92,29 @@ def create_app():
         return render_template('wanted_scenes.html', 
                              wanted_scenes=wanted, 
                              this_week_count=this_week_count)
+    
+    @app.route('/filtered-scenes')
+    def filtered_scenes():
+        """Filtered scenes list"""
+        filtered = FilteredScene.query.order_by(FilteredScene.filtered_date.desc()).all()
+        
+        # Calculate scenes filtered in the last 7 days
+        from datetime import datetime, timedelta
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        this_week_count = FilteredScene.query.filter(FilteredScene.filtered_date >= week_ago).count()
+        
+        # Group by filter reason for stats
+        filter_reasons = {}
+        for scene in filtered:
+            reason = scene.filter_reason
+            if reason not in filter_reasons:
+                filter_reasons[reason] = 0
+            filter_reasons[reason] += 1
+        
+        return render_template('filtered_scenes.html', 
+                             filtered_scenes=filtered,
+                             this_week_count=this_week_count,
+                             filter_reasons=filter_reasons)
     
     @app.route('/settings')
     def settings():
@@ -446,6 +469,152 @@ def create_app():
             
         except Exception as e:
             app.logger.error(f"Error cleaning up duplicates: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/create-filter-exception', methods=['POST'])
+    def create_filter_exception():
+        """Create an exception for a filtered scene"""
+        try:
+            data = request.json
+            filtered_scene_id = data.get('filtered_scene_id')
+            exception_type = data.get('exception_type', 'permanent')  # permanent, temporary
+            reason = data.get('reason', 'User exception')
+            auto_add_to_whisparr = data.get('auto_add_to_whisparr', False)
+            expires_hours = data.get('expires_hours')  # for temporary exceptions
+            
+            filtered_scene = FilteredScene.query.get(filtered_scene_id)
+            if not filtered_scene:
+                return jsonify({'status': 'error', 'message': 'Filtered scene not found'}), 404
+            
+            # Check if exception already exists
+            existing = FilterException.query.filter_by(
+                filtered_scene_id=filtered_scene_id,
+                is_active=True
+            ).first()
+            
+            if existing:
+                return jsonify({'status': 'error', 'message': 'Exception already exists for this scene'}), 400
+            
+            # Set expiration for temporary exceptions
+            expires_at = None
+            if exception_type == 'temporary' and expires_hours:
+                from datetime import datetime, timedelta
+                expires_at = datetime.utcnow() + timedelta(hours=int(expires_hours))
+            
+            # Create the exception
+            exception = FilterException(
+                filtered_scene_id=filtered_scene_id,
+                exception_type=exception_type,
+                reason=reason,
+                expires_at=expires_at,
+                auto_add_to_whisparr=auto_add_to_whisparr
+            )
+            
+            db.session.add(exception)
+            
+            # Mark the filtered scene as having an exception
+            filtered_scene.is_exception = True
+            filtered_scene.exception_date = datetime.utcnow()
+            filtered_scene.exception_reason = reason
+            
+            # If auto-add to whisparr is enabled, create wanted scene
+            if auto_add_to_whisparr and filtered_scene.stashdb_id:
+                # Create a Scene record first
+                scene = Scene(
+                    stashdb_id=filtered_scene.stashdb_id,
+                    title=filtered_scene.title,
+                    release_date=filtered_scene.release_date,
+                    duration=filtered_scene.duration,
+                    is_wanted=True
+                )
+                scene.set_tags(filtered_scene.get_tags())
+                db.session.add(scene)
+                db.session.flush()  # Get the scene ID
+                
+                # Create WantedScene entry
+                wanted = WantedScene(
+                    scene_id=scene.id,
+                    title=filtered_scene.title,
+                    studio_name=filtered_scene.studio,
+                    release_date=filtered_scene.release_date,
+                    status='wanted'
+                )
+                
+                performers = filtered_scene.get_performers()
+                if performers:
+                    wanted.performer_name = ', '.join(performers[:3])  # First 3 performers
+                
+                db.session.add(wanted)
+            
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Exception created successfully',
+                'exception_id': exception.id,
+                'auto_added': auto_add_to_whisparr
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error creating filter exception: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/remove-filter-exception', methods=['DELETE'])
+    def remove_filter_exception():
+        """Remove a filter exception"""
+        try:
+            data = request.json
+            exception_id = data.get('exception_id')
+            
+            exception = FilterException.query.get(exception_id)
+            if not exception:
+                return jsonify({'status': 'error', 'message': 'Exception not found'}), 404
+            
+            # Update the filtered scene
+            filtered_scene = exception.filtered_scene
+            filtered_scene.is_exception = False
+            filtered_scene.exception_date = None
+            filtered_scene.exception_reason = None
+            
+            # Remove the exception
+            db.session.delete(exception)
+            db.session.commit()
+            
+            return jsonify({'status': 'success', 'message': 'Exception removed successfully'})
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error removing filter exception: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/clear-old-filtered-scenes', methods=['POST'])
+    def clear_old_filtered_scenes():
+        """Clear old filtered scenes (older than specified days)"""
+        try:
+            data = request.json
+            days = data.get('days', 30)  # Default 30 days
+            
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.utcnow() - timedelta(days=int(days))
+            
+            # Delete old filtered scenes without exceptions
+            deleted = FilteredScene.query.filter(
+                FilteredScene.filtered_date < cutoff_date,
+                FilteredScene.is_exception == False
+            ).delete()
+            
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Cleared {deleted} old filtered scenes',
+                'deleted_count': deleted
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error clearing old filtered scenes: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
     
     @app.route('/whisparr-movie/<int:id>')

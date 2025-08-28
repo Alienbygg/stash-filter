@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
-from .models import db, Performer, Studio, Scene, WantedScene, Config
+from .models import db, Performer, Studio, Scene, WantedScene, Config, FilteredScene
 from .stash_api import StashAPI
 from .stashdb_api import StashDBAPI
 from .whisparr_api import WhisparrAPI
@@ -336,6 +336,31 @@ def process_scene(scene_data: Dict, stash_api: StashAPI, config: Config, perform
         if is_filtered:
             results['filtered_scenes'] += 1
             logger.debug(f"Filtered scene: {title} - {filter_reason}")
+            
+            # Save filtered scene to database for exception management
+            filtered_scene = FilteredScene(
+                stash_id=None,  # We don't have stash_id, only stashdb_id
+                stashdb_id=scene_id,
+                title=title,
+                studio=get_studio_name_from_scene(scene_data),
+                duration=scene_data.get('duration'),
+                release_date=scene_data.get('date'),
+                filter_reason=filter_reason.split(':')[0] if ':' in filter_reason else 'category_filter',
+                filter_category=filter_reason.split(':')[1].strip() if ':' in filter_reason else filter_reason,
+                filter_details=filter_reason
+            )
+            
+            # Set performers and tags
+            performers = scene_data.get('performers', [])
+            performer_names = [p.get('performer', {}).get('name', '') for p in performers]
+            filtered_scene.set_performers(performer_names)
+            
+            tags = scene_data.get('tags', [])
+            tag_names = [tag.get('name', '') for tag in tags]
+            filtered_scene.set_tags(tag_names)
+            
+            db.session.add(filtered_scene)
+            
         elif not is_owned:
             # Check if a WantedScene already exists for this StashDB ID
             existing_wanted = WantedScene.query.join(Scene).filter(

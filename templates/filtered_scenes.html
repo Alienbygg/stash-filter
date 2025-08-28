@@ -1,466 +1,396 @@
 {% extends "base.html" %}
 
-{% block title %}Filtered Scenes - Stash Filter{% endblock %}
-
-{% block head %}
-<style>
-    .filter-card {
-        transition: transform 0.2s;
-    }
-    .filter-card:hover {
-        transform: translateY(-2px);
-    }
-    .scene-thumbnail {
-        width: 80px;
-        height: 45px;
-        object-fit: cover;
-        border-radius: 4px;
-    }
-    .scene-thumbnail-placeholder {
-        width: 80px;
-        height: 45px;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6c757d;
-    }
-    .filter-reason-badge {
-        font-size: 0.7rem;
-    }
-    .exception-status {
-        font-size: 0.75rem;
-    }
-    .loading-spinner {
-        display: none;
-    }
-    .loading .loading-spinner {
-        display: inline-block;
-    }
-    .performers-list {
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .chart-container {
-        position: relative;
-        height: 200px;
-    }
-    .stats-card {
-        border-left: 4px solid;
-    }
-    .stats-card.total { border-left-color: #0d6efd; }
-    .stats-card.exceptions { border-left-color: #198754; }
-    .stats-card.rate { border-left-color: #0dcaf0; }
-    .stats-card.top-filter { border-left-color: #fd7e14; }
-</style>
-{% endblock %}
-
-{% block header %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
-        <i class="fas fa-filter text-primary"></i> Filtered Scenes Manager
-    </h1>
-    <div class="btn-group" role="group">
-        <button type="button" class="btn btn-outline-primary" id="refresh-btn" onclick="refreshData()">
-            <i class="fas fa-sync-alt"></i> Refresh
-        </button>
-        <button type="button" class="btn btn-outline-secondary" onclick="showCleanupModal()">
-            <i class="fas fa-broom"></i> Cleanup
-        </button>
-        <button type="button" class="btn btn-outline-info" onclick="exportData()">
-            <i class="fas fa-download"></i> Export
-        </button>
-    </div>
-</div>
-{% endblock %}
+{% block title %}Filtered Scenes - Stash-Filter{% endblock %}
 
 {% block content %}
-<!-- Statistics Cards -->
-<div class="row mb-4" id="stats-cards">
-    <div class="col-md-3 mb-3">
-        <div class="card stats-card total h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title text-muted mb-1">Total Filtered</h5>
-                        <h2 class="text-primary mb-0" id="total-filtered">-</h2>
-                        <small class="text-muted">Last 30 days</small>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2>Filtered Scenes</h2>
+            <p class="text-muted">Scenes that were excluded by your filtering rules</p>
+            
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Filtered</h5>
+                            <h3 class="text-primary">{{ filtered_scenes|length }}</h3>
+                            <small class="text-muted">All time</small>
+                        </div>
                     </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-filter fa-2x text-primary opacity-50"></i>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">This Week</h5>
+                            <h3 class="text-info">{{ this_week_count }}</h3>
+                            <small class="text-muted">Last 7 days</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">With Exceptions</h5>
+                            <h3 class="text-success">{{ filtered_scenes|selectattr('is_exception')|list|length }}</h3>
+                            <small class="text-muted">Allowed through</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Filter Reasons</h5>
+                            <h3 class="text-warning">{{ filter_reasons|length }}</h3>
+                            <small class="text-muted">Unique reasons</small>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card stats-card exceptions h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title text-muted mb-1">Exceptions</h5>
-                        <h2 class="text-success mb-0" id="total-exceptions">-</h2>
-                        <small class="text-muted">Active overrides</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card stats-card rate h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title text-muted mb-1">Exception Rate</h5>
-                        <h2 class="text-info mb-0" id="exception-rate">-</h2>
-                        <small class="text-muted">Percentage rescued</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-percentage fa-2x text-info opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card stats-card top-filter h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title text-muted mb-1">Top Filter</h5>
-                        <h6 class="text-warning mb-0" id="top-filter-reason">-</h6>
-                        <small class="text-muted" id="top-filter-count">Most common reason</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-chart-bar fa-2x text-warning opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Filters and Search -->
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="card-title">
-            <i class="fas fa-search"></i> Search & Filters
-        </h5>
-        
-        <form id="filter-form">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Filter Reason</label>
-                    <select class="form-select" name="filter_reason" id="filter-reason">
-                        <option value="">All Filter Reasons</option>
-                        <option value="already_downloaded">Already Downloaded</option>
-                        <option value="unwanted_tags">Unwanted Tags</option>
-                        <option value="studio_filter">Studio Filter</option>
-                        <option value="date_range">Date Range</option>
-                        <option value="duration_filter">Duration Filter</option>
-                        <option value="rating_filter">Rating Filter</option>
-                        <option value="custom_rules">Custom Rules</option>
-                    </select>
-                </div>
-                
-                <div class="col-md-3">
-                    <label class="form-label">Exception Status</label>
-                    <select class="form-select" name="has_exception" id="exception-status">
-                        <option value="">All Scenes</option>
-                        <option value="false">No Exception</option>
-                        <option value="true">Has Exception</option>
-                    </select>
-                </div>
-                
-                <div class="col-md-3">
-                    <label class="form-label">From Date</label>
-                    <input type="date" class="form-control" name="date_from" id="date-from">
-                </div>
-                
-                <div class="col-md-3">
-                    <label class="form-label">To Date</label>
-                    <input type="date" class="form-control" name="date_to" id="date-to">
-                </div>
-                
-                <div class="col-md-9">
-                    <label class="form-label">Search</label>
-                    <input type="text" class="form-control" name="search" id="search" 
-                           placeholder="Search in titles, performers, studios...">
-                </div>
-                
-                <div class="col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </form>
-        
-        <div class="mt-3">
-            <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="clearFilters()">
-                <i class="fas fa-times"></i> Clear Filters
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-primary" onclick="saveFilterPreset()">
-                <i class="fas fa-bookmark"></i> Save Preset
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Bulk Actions -->
-<div class="card mb-4" id="bulk-actions" style="display: none;">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <strong><span id="selected-count">0</span></strong> scenes selected
-            </div>
-            <div class="btn-group">
-                <button type="button" class="btn btn-success btn-sm" onclick="showBulkExceptionModal()">
-                    <i class="fas fa-check"></i> Create Exceptions
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAll()">
-                    <i class="fas fa-times"></i> Deselect All
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Scenes Table -->
-<div class="card">
-    <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-table"></i> Filtered Scenes
-                <span class="badge bg-secondary ms-2" id="scene-count">0</span>
-            </h5>
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll()">
-                <label class="form-check-label" for="select-all-checkbox">
-                    Select All
-                </label>
-            </div>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th width="40"></th>
-                        <th width="90">Preview</th>
-                        <th>Title</th>
-                        <th>Performers</th>
-                        <th>Studio</th>
-                        <th>Filter Reason</th>
-                        <th>Filtered Date</th>
-                        <th>Status</th>
-                        <th width="160">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="scenes-table">
-                    <tr>
-                        <td colspan="9" class="text-center py-4">
-                            <div class="loading-spinner spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+            <!-- Filter Reasons Breakdown -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Filter Reasons Breakdown</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for reason, count in filter_reasons.items() %}
+                                <div class="col-md-4 mb-2">
+                                    <span class="badge bg-secondary me-2">{{ count }}</span>
+                                    <span class="text-muted">{{ reason }}</span>
+                                </div>
+                                {% endfor %}
                             </div>
-                            <div id="loading-text">Loading filtered scenes...</div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Management Actions -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Bulk Actions</h6>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-warning" onclick="clearOldFilteredScenes(7)">
+                                    Clear 7+ Days Old
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" onclick="clearOldFilteredScenes(30)">
+                                    Clear 30+ Days Old
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="clearOldFilteredScenes(0)">
+                                    Clear All (Keep Exceptions)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtered Scenes List -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>Filtered Scenes ({{ filtered_scenes|length }})</h5>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterByReason('')">All</button>
+                                {% for reason in filter_reasons.keys() %}
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterByReason('{{ reason }}')">
+                                    {{ reason|replace('_', ' ')|title }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if filtered_scenes %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Scene</th>
+                                                <th>Studio</th>
+                                                <th>Performers</th>
+                                                <th>Filter Reason</th>
+                                                <th>Filtered Date</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="filtered-scenes-table">
+                                            {% for scene in filtered_scenes %}
+                                            <tr data-filter-reason="{{ scene.filter_reason }}" 
+                                                class="{% if scene.is_exception %}table-success{% endif %}">
+                                                <td>
+                                                    <strong>{{ scene.title }}</strong>
+                                                    {% if scene.release_date %}
+                                                        <br><small class="text-muted">{{ scene.release_date }}</small>
+                                                    {% endif %}
+                                                    {% if scene.duration %}
+                                                        <br><small class="text-muted">{{ (scene.duration / 60) | round(1) }} min</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {{ scene.studio or 'Unknown' }}
+                                                </td>
+                                                <td>
+                                                    {% if scene.get_performers() %}
+                                                        {{ scene.get_performers()[:3] | join(', ') }}
+                                                        {% if scene.get_performers()|length > 3 %}
+                                                            <br><small class="text-muted">+{{ scene.get_performers()|length - 3 }} more</small>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-muted">Unknown</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-danger">{{ scene.filter_category }}</span>
+                                                    {% if scene.filter_details %}
+                                                        <br><small class="text-muted">{{ scene.filter_details }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {{ scene.filtered_date.strftime('%Y-%m-%d %H:%M') }}
+                                                </td>
+                                                <td>
+                                                    {% if scene.is_exception %}
+                                                        <span class="badge bg-success">Exception</span>
+                                                        {% if scene.exception_reason %}
+                                                            <br><small class="text-muted">{{ scene.exception_reason }}</small>
+                                                        {% endif %}
+                                                        {% if scene.exception_date %}
+                                                            <br><small class="text-muted">{{ scene.exception_date.strftime('%Y-%m-%d') }}</small>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Filtered</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if scene.is_exception %}
+                                                        {% for exception in scene.exceptions %}
+                                                            {% if exception.is_active and not exception.is_expired() %}
+                                                                <button class="btn btn-sm btn-outline-danger" 
+                                                                        onclick="removeException({{ exception.id }}, '{{ scene.title|e }}')">
+                                                                    Remove Exception
+                                                                </button>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <button class="btn btn-sm btn-success" 
+                                                                onclick="createException({{ scene.id }}, '{{ scene.title|e }}')">
+                                                            Create Exception
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <h5 class="text-muted">No filtered scenes found</h5>
+                                    <p class="text-muted">Scenes that match your unwanted categories will appear here.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <!-- Pagination -->
-        <nav aria-label="Scenes pagination" class="mt-4">
-            <ul class="pagination justify-content-center" id="pagination">
-                <!-- Dynamic pagination will be inserted here -->
-            </ul>
-        </nav>
     </div>
 </div>
 
 <!-- Exception Modal -->
 <div class="modal fade" id="exceptionModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create Exception</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="exception-form">
-                    <input type="hidden" name="scene_id" id="exception-scene-id">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Exception Type</label>
-                        <select class="form-select" name="type" id="exception-type" required>
-                            <option value="permanent">Permanent - Always allow this scene</option>
-                            <option value="temporary">Temporary - Allow until specific date</option>
-                            <option value="one-time">One-time - Allow for next discovery only</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3" id="expires-section" style="display: none;">
-                        <label class="form-label">Expires On</label>
-                        <input type="datetime-local" class="form-control" name="expires_at" id="expires-at">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Reason (Optional)</label>
-                        <textarea class="form-control" name="reason" rows="3" 
-                                  placeholder="Why should this scene be allowed?"></textarea>
-                    </div>
-                    
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="add_to_whisparr" id="add-to-whisparr">
-                        <label class="form-check-label" for="add-to-whisparr">
-                            Immediately add to Whisparr for download
-                        </label>
-                    </div>
-                    
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Exception Types:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li><strong>Permanent:</strong> Scene will never be filtered again</li>
-                            <li><strong>Temporary:</strong> Scene allowed until expiration date</li>
-                            <li><strong>One-time:</strong> Scene allowed for next discovery run only</li>
-                        </ul>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="create-exception-btn" onclick="createException()">
-                    Create Exception
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Bulk Exception Modal -->
-<div class="modal fade" id="bulkExceptionModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Create Bulk Exceptions</h5>
+                <h5 class="modal-title">Create Filter Exception</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="bulk-exception-form">
-                    <div class="alert alert-info">
-                        Create exceptions for <strong><span id="bulk-scene-count">0</span></strong> selected scenes.
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Exception Type</label>
-                        <select class="form-select" name="type" required>
-                            <option value="permanent">Permanent - Always allow these scenes</option>
-                            <option value="temporary">Temporary - Allow until specific date</option>
-                            <option value="one-time">One-time - Allow for next discovery only</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3" id="bulk-expires-section" style="display: none;">
-                        <label class="form-label">Expires On</label>
-                        <input type="datetime-local" class="form-control" name="expires_at">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Reason (Optional)</label>
-                        <textarea class="form-control" name="reason" rows="3" 
-                                  placeholder="Why should these scenes be allowed?"></textarea>
-                    </div>
-                    
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="add_to_whisparr">
-                        <label class="form-check-label">
-                            Add all to Whisparr for download
-                        </label>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="createBulkExceptions()">
-                    Create Exceptions
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Cleanup Modal -->
-<div class="modal fade" id="cleanupModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cleanup Old Data</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="cleanup-form">
-                    <div class="mb-3">
-                        <label class="form-label">Keep Data For (Days)</label>
-                        <input type="number" class="form-control" name="days_to_keep" value="90" min="1" max="365">
-                        <div class="form-text">Filtered scenes older than this will be deleted (except those with active exceptions)</div>
-                    </div>
-                    
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        This action will:
-                        <ul class="mb-0 mt-2">
-                            <li>Delete old filtered scenes (without exceptions)</li>
-                            <li>Deactivate expired exceptions</li>
-                            <li>Update scene exception status</li>
-                        </ul>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" onclick="performCleanup()">
-                    <i class="fas fa-broom"></i> Start Cleanup
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Scene Details Modal -->
-<div class="modal fade" id="sceneDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Scene Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="scene-details-content">
-                    <!-- Dynamic content will be loaded here -->
+                <div class="mb-3">
+                    <strong id="exception-scene-title"></strong>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="exception-type" class="form-label">Exception Type</label>
+                    <select class="form-select" id="exception-type">
+                        <option value="permanent">Permanent - Always allow this scene</option>
+                        <option value="temporary">Temporary - Allow for specified time</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3" id="expires-section" style="display: none;">
+                    <label for="expires-hours" class="form-label">Expires In (Hours)</label>
+                    <input type="number" class="form-control" id="expires-hours" min="1" max="8760" value="168">
+                    <small class="form-text text-muted">168 hours = 1 week</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="exception-reason" class="form-label">Reason (Optional)</label>
+                    <input type="text" class="form-control" id="exception-reason" 
+                           placeholder="Why should this scene be allowed?">
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="auto-add-whisparr">
+                    <label class="form-check-label" for="auto-add-whisparr">
+                        Automatically add to wanted scenes
+                    </label>
+                    <small class="form-text text-muted d-block">
+                        This will immediately add the scene to your wanted list
+                    </small>
                 </div>
             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitException()">Create Exception</button>
+            </div>
         </div>
     </div>
 </div>
 
-{% endblock %}
+<script>
+// Global variables for the exception modal
+let currentFilteredSceneId = null;
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/filtered-scenes.js') }}"></script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide expires section based on exception type
+    document.getElementById('exception-type').addEventListener('change', function() {
+        const expiresSection = document.getElementById('expires-section');
+        if (this.value === 'temporary') {
+            expiresSection.style.display = 'block';
+        } else {
+            expiresSection.style.display = 'none';
+        }
+    });
+});
+
+function createException(filteredSceneId, sceneTitle) {
+    currentFilteredSceneId = filteredSceneId;
+    document.getElementById('exception-scene-title').textContent = sceneTitle;
+    
+    // Reset form
+    document.getElementById('exception-type').value = 'permanent';
+    document.getElementById('expires-hours').value = 168;
+    document.getElementById('exception-reason').value = '';
+    document.getElementById('auto-add-whisparr').checked = false;
+    document.getElementById('expires-section').style.display = 'none';
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('exceptionModal')).show();
+}
+
+function submitException() {
+    const exceptionData = {
+        filtered_scene_id: currentFilteredSceneId,
+        exception_type: document.getElementById('exception-type').value,
+        reason: document.getElementById('exception-reason').value || 'User exception',
+        auto_add_to_whisparr: document.getElementById('auto-add-whisparr').checked
+    };
+    
+    if (exceptionData.exception_type === 'temporary') {
+        exceptionData.expires_hours = parseInt(document.getElementById('expires-hours').value);
+    }
+    
+    fetch('/api/create-filter-exception', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(exceptionData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('exceptionModal')).hide();
+            
+            let message = 'Exception created successfully!';
+            if (data.auto_added) {
+                message += ' Scene has been added to your wanted list.';
+            }
+            
+            alert(message);
+            location.reload(); // Refresh to show updated status
+        } else {
+            alert('Error creating exception: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error creating exception: ' + error.message);
+    });
+}
+
+function removeException(exceptionId, sceneTitle) {
+    if (confirm(`Remove exception for "${sceneTitle}"?\n\nThis will restore the original filter and hide this scene again.`)) {
+        fetch('/api/remove-filter-exception', {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({exception_id: exceptionId})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Exception removed successfully!');
+                location.reload();
+            } else {
+                alert('Error removing exception: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error removing exception: ' + error.message);
+        });
+    }
+}
+
+function filterByReason(reason) {
+    const rows = document.querySelectorAll('#filtered-scenes-table tr');
+    
+    rows.forEach(row => {
+        if (reason === '' || row.dataset.filterReason === reason) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update button states
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function clearOldFilteredScenes(days) {
+    let message;
+    if (days === 0) {
+        message = 'Clear ALL filtered scenes (except those with exceptions)?';
+    } else {
+        message = `Clear filtered scenes older than ${days} days?`;
+    }
+    
+    if (confirm(message)) {
+        fetch('/api/clear-old-filtered-scenes', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({days: days})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(`Successfully cleared ${data.deleted_count} old filtered scenes.`);
+                location.reload();
+            } else {
+                alert('Error clearing scenes: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error clearing scenes: ' + error.message);
+        });
+    }
+}
+</script>
 {% endblock %}
