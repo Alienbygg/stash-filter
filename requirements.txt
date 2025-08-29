@@ -1,46 +1,41 @@
-# Web Framework
-Flask==2.3.3
-Flask-SQLAlchemy==3.0.5
-Flask-WTF==1.1.1
-WTForms==3.0.1
-
-# HTTP Requests
-requests==2.31.0
-urllib3==2.0.4
-
-# Database (sqlite3 is built into Python)
-
-# Date/Time handling
-python-dateutil==2.8.2
-
-# JSON handling
-jsonschema==4.19.0
-
-# Scheduling
-APScheduler==3.10.4
-
-# Logging
-structlog==23.1.0
 
 # Configuration
-python-dotenv==1.0.0
-
-# GraphQL (for StashDB)
-gql==3.4.1
-requests-toolbelt==1.0.0
-
-# Validation
-validators==0.22.0
-
-# Web scraping utilities
-beautifulsoup4==4.12.2
-lxml==4.9.3
-
+# Database (sqlite3 is built into Python)
+# Date/Time handling
 # Development tools (optional)
-pytest==7.4.2
-pytest-flask==1.2.0
-black==23.7.0
-flake8==6.0.0
-
+# GraphQL (for StashDB)
+# HTTP Requests
 # Health check (using requests instead)
+# JSON handling
+# Logging
+# Scheduling
+# Validation
+# Web Framework
+# Web scraping utilities
 # curl-cffi==0.5.10
+APScheduler==3.10.4
+Flask-SQLAlchemy==3.0.5
+Flask-WTF==1.1.1
+Flask==2.3.3
+WTForms==3.0.1
+beautifulsoup4==4.12.2
+black==23.7.0
+click>=8.0.0
+flake8==6.0.0
+gql==3.4.1
+gunicorn>=20.1.0
+jinja2>=3.0.0
+jsonschema==4.19.0
+lxml==4.9.3
+pytest-flask==1.2.0
+pytest==7.4.2
+python-dateutil==2.8.2
+python-dotenv==1.0.0
+requests-toolbelt==1.0.0
+requests==2.31.0
+schedule>=1.1.0
+sqlite3
+structlog==23.1.0
+urllib3==2.0.4
+validators==0.22.0
+werkzeug>=2.0.0
