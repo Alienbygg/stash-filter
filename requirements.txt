@@ -36,12 +36,6 @@ validators==0.22.0
 beautifulsoup4==4.12.2
 lxml==4.9.3
 
-# System monitoring
-psutil==5.9.5
-
-# Production WSGI server
-gunicorn==21.2.0
-
 # Development tools (optional)
 pytest==7.4.2
 pytest-flask==1.2.0

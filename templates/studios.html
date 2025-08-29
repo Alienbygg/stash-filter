@@ -10,9 +10,6 @@
             <button type="button" class="btn btn-sm btn-primary" id="sync-favorites">
                 <i class="fas fa-sync"></i> Sync from Stash
             </button>
-            <button type="button" class="btn btn-sm btn-success" onclick="showAddStudioModal()">
-                <i class="fas fa-plus"></i> Add Manually
-            </button>
         </div>
     </div>
 </div>
@@ -231,156 +228,10 @@
     </div>
 </div>
 
-<!-- Add Studio Modal -->
-<div class="modal fade" id="addStudioModal" tabindex="-1" aria-labelledby="addStudioModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addStudioModalLabel">
-                    <i class="fas fa-search me-2"></i>Add Studio from StashDB
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="studioSearchInput" class="form-label">Search for Studio</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="studioSearchInput" 
-                               placeholder="Enter studio name..." onkeypress="if(event.key==='Enter') searchStudios()">
-                        <button class="btn btn-primary" type="button" onclick="searchStudios()">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="studioSearchResults" class="d-none">
-                    <h6>Search Results:</h6>
-                    <div id="studioResultsList" class="list-group">
-                        <!-- Results will be populated here -->
-                    </div>
-                </div>
-                
-                <div id="studioSearchLoading" class="d-none text-center py-3">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Searching StashDB...</p>
-                </div>
-                
-                <div id="studioSearchEmpty" class="d-none text-center py-3">
-                    <i class="fas fa-building-slash fa-2x text-muted"></i>
-                    <p class="mt-2 text-muted">No studios found. Try a different search term.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-function showAddStudioModal() {
-    // Reset modal state
-    document.getElementById('studioSearchInput').value = '';
-    document.getElementById('studioSearchResults').classList.add('d-none');
-    document.getElementById('studioSearchLoading').classList.add('d-none');
-    document.getElementById('studioSearchEmpty').classList.add('d-none');
-    
-    // Show modal
-    new bootstrap.Modal(document.getElementById('addStudioModal')).show();
-}
-
-function searchStudios() {
-    const searchTerm = document.getElementById('studioSearchInput').value.trim();
-    
-    if (!searchTerm) {
-        alert('Please enter a studio name to search.');
-        return;
-    }
-    
-    // Show loading state
-    document.getElementById('studioSearchResults').classList.add('d-none');
-    document.getElementById('studioSearchEmpty').classList.add('d-none');
-    document.getElementById('studioSearchLoading').classList.remove('d-none');
-    
-    fetch('/api/search-studios', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            search_term: searchTerm
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('studioSearchLoading').classList.add('d-none');
-        
-        if (data.status === 'success' && data.results.length > 0) {
-            displayStudioResults(data.results);
-        } else {
-            document.getElementById('studioSearchEmpty').classList.remove('d-none');
-        }
-    })
-    .catch(error => {
-        document.getElementById('studioSearchLoading').classList.add('d-none');
-        console.error('Error searching studios:', error);
-        alert('Error searching studios: ' + error.message);
-    });
-}
-
-function displayStudioResults(results) {
-    const resultsList = document.getElementById('studioResultsList');
-    resultsList.innerHTML = '';
-    
-    results.forEach(studio => {
-        const listItem = document.createElement('div');
-        listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-        listItem.innerHTML = `
-            <div>
-                <h6 class="mb-1">${studio.name}</h6>
-                <small class="text-muted">StashDB ID: ${studio.id}</small>
-            </div>
-            <button class="btn btn-sm btn-success" onclick="addStudio('${studio.id}', '${studio.name.replace(/'/g, "\\'")}')">                
-                <i class="fas fa-plus"></i> Add
-            </button>
-        `;
-        resultsList.appendChild(listItem);
-    });
-    
-    document.getElementById('studioSearchResults').classList.remove('d-none');
-}
-
-function addStudio(stashdbId, name) {
-    if (confirm(`Add studio "${name}" to monitoring list?`)) {
-        fetch('/api/add-studio', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                stashdb_id: stashdbId,
-                name: name
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                bootstrap.Modal.getInstance(document.getElementById('addStudioModal')).hide();
-                location.reload(); // Refresh to show new studio
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error adding studio:', error);
-            alert('Error adding studio: ' + error.message);
-        });
-    }
-}
-
 function checkStudio(studioId) {
     // This would trigger a specific studio check
     alert('Studio check functionality will be implemented in a future update.');

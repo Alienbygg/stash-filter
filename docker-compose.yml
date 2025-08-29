@@ -16,6 +16,16 @@ services:
       - ./app:/app/app
     environment:
       - FLASK_ENV=production
+      - STASH_URL=http://10.11.12.70:6969
+      - STASH_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJjaEZyZXNoIiwiaWF0IjoxNzQ2OTkxNDQyLCJzdWIiOiJBUElLZXkifQ.xNuPPUxduQIC5F4q-IGF0eoi8mIP95QhtpnCz52aQUk
+      - WHISPARR_URL=http://10.11.12.77:6969
+      - WHISPARR_API_KEY=b3b0672869b54552ba1df30c24661f78
+      - STASHDB_URL=https://stashdb.org
+      - STASHDB_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NzcxN2JjYi00MDhjLTQ0YTEtOTBkZS01MjNiNjdjZGYzZjMiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE3MjU5MTc1OTZ9.LL2Tb-5lYzEoILSYGL8_SITug6tTUc0ehm4bFQRneyU
+      - DATABASE_PATH=/app/data/stash_filter.db
+      - LOG_LEVEL=INFO
+      - CONFIG_PATH=/app/data/config.json
+      - SECRET_KEY=stash-filter-secret-key-production-2025
     networks:
       - stash-network
     healthcheck:

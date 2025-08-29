@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
-from .models import db, Performer, Studio, Scene, WantedScene, Config, FilteredScene
+from .models import db, Performer, Studio, Scene, WantedScene, Config
 from .stash_api import StashAPI
 from .stashdb_api import StashDBAPI
 from .whisparr_api import WhisparrAPI
@@ -37,15 +37,8 @@ def run_discovery_task() -> Dict:
         
         logger.info(f"Monitoring {len(monitored_performers)} performers and {len(monitored_studios)} studios")
         
-        # Process performers - limit to prevent timeouts
-        performers_processed = 0
-        max_performers_per_run = 10  # Limit to prevent worker timeout
-        
+        # Process performers - check multiple pages for each
         for performer in monitored_performers:
-            if performers_processed >= max_performers_per_run:
-                logger.info(f"Reached performer limit ({max_performers_per_run}) for this run")
-                break
-                
             try:
                 performer_results = process_performer_scenes(performer, stashdb_api, stash_api, config)
                 results['new_scenes'] += performer_results['new_scenes']
@@ -53,29 +46,16 @@ def run_discovery_task() -> Dict:
                 
                 # Update last checked time
                 performer.last_checked = datetime.utcnow()
-                performers_processed += 1
                 
                 logger.info(f"Processed {performer.name}: {performer_results['new_scenes']} new, {performer_results['filtered_scenes']} filtered")
-                
-                # Commit progress periodically to prevent data loss
-                if performers_processed % 5 == 0:
-                    db.session.commit()
-                    logger.info(f"Committed progress after {performers_processed} performers")
                 
             except Exception as e:
                 error_msg = f"Error processing performer {performer.name}: {str(e)}"
                 logger.error(error_msg)
                 results['errors'].append(error_msg)
         
-        # Process studios - limit to prevent timeouts
-        studios_processed = 0
-        max_studios_per_run = 5  # Studios have more scenes, so process fewer
-        
+        # Process studios - check multiple pages for each
         for studio in monitored_studios:
-            if studios_processed >= max_studios_per_run:
-                logger.info(f"Reached studio limit ({max_studios_per_run}) for this run")
-                break
-                
             try:
                 studio_results = process_studio_scenes(studio, stashdb_api, stash_api, config)
                 results['new_scenes'] += studio_results['new_scenes']
@@ -83,13 +63,8 @@ def run_discovery_task() -> Dict:
                 
                 # Update last checked time
                 studio.last_checked = datetime.utcnow()
-                studios_processed += 1
                 
                 logger.info(f"Processed {studio.name}: {studio_results['new_scenes']} new, {studio_results['filtered_scenes']} filtered")
-                
-                # Commit progress after each studio due to large number of scenes
-                db.session.commit()
-                logger.info(f"Committed progress after studio {studio.name}")
                 
             except Exception as e:
                 error_msg = f"Error processing studio {studio.name}: {str(e)}"
@@ -146,7 +121,7 @@ def process_performer_scenes(performer: Performer, stashdb_api: StashDBAPI, stas
         
         # Get ALL scenes for this performer from StashDB - comprehensive approach
         try:
-            max_pages = 5  # Reduced to prevent timeout - get up to 250 scenes per run
+            max_pages = 20  # Get up to 1000 scenes (20 pages × 50 scenes)
             all_scenes_processed = 0
             
             for page_num in range(1, max_pages + 1):
@@ -230,7 +205,7 @@ def process_studio_scenes(studio: Studio, stashdb_api: StashDBAPI, stash_api: St
         
         # Get ALL scenes for this studio from StashDB - comprehensive approach
         try:
-            max_pages = 10  # Reduced to prevent timeout - get up to 500 scenes per run
+            max_pages = 50  # Studios can have many scenes - get up to 2500 scenes
             all_scenes_processed = 0
             
             for page_num in range(1, max_pages + 1):
@@ -361,31 +336,6 @@ def process_scene(scene_data: Dict, stash_api: StashAPI, config: Config, perform
         if is_filtered:
             results['filtered_scenes'] += 1
             logger.debug(f"Filtered scene: {title} - {filter_reason}")
-            
-            # Save filtered scene to database for exception management
-            filtered_scene = FilteredScene(
-                stash_id=None,  # We don't have stash_id, only stashdb_id
-                stashdb_id=scene_id,
-                title=title,
-                studio=get_studio_name_from_scene(scene_data),
-                duration=scene_data.get('duration'),
-                release_date=scene_data.get('date'),
-                filter_reason=filter_reason.split(':')[0] if ':' in filter_reason else 'category_filter',
-                filter_category=filter_reason.split(':')[1].strip() if ':' in filter_reason else filter_reason,
-                filter_details=filter_reason
-            )
-            
-            # Set performers and tags
-            performers = scene_data.get('performers', [])
-            performer_names = [p.get('performer', {}).get('name', '') for p in performers]
-            filtered_scene.set_performers(performer_names)
-            
-            tags = scene_data.get('tags', [])
-            tag_names = [tag.get('name', '') for tag in tags]
-            filtered_scene.set_tags(tag_names)
-            
-            db.session.add(filtered_scene)
-            
         elif not is_owned:
             # Check if a WantedScene already exists for this StashDB ID
             existing_wanted = WantedScene.query.join(Scene).filter(

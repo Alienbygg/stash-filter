@@ -224,131 +224,6 @@ def create_app():
             app.logger.error(f"Error testing connections: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
     
-    @app.route('/api/search-performers', methods=['POST'])
-    def search_performers():
-        """Search for performers in StashDB"""
-        try:
-            data = request.json
-            search_term = data.get('query', '').strip()
-            
-            if not search_term:
-                return jsonify({'status': 'error', 'message': 'Search term required'}), 400
-            
-            # Search StashDB for performers
-            results = stashdb_api.search_performer(search_term)
-            
-            # Format results for frontend
-            formatted_results = []
-            for performer in results:
-                formatted_results.append({
-                    'stashdb_id': performer.get('id'),
-                    'name': performer.get('name'),
-                    'stashdb_url': f"https://stashdb.org/performers/{performer.get('id')}"
-                })
-            
-            return jsonify({
-                'status': 'success',
-                'results': formatted_results,
-                'count': len(formatted_results)
-            })
-            
-        except Exception as e:
-            app.logger.error(f"Error searching performers: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/add-performer', methods=['POST'])
-    def add_performer():
-        """Add a performer to monitoring list"""
-        try:
-            data = request.json
-            stashdb_id = data.get('stashdb_id')
-            name = data.get('name')
-            
-            if not stashdb_id or not name:
-                return jsonify({'status': 'error', 'message': 'StashDB ID and name required'}), 400
-            
-            # Check if performer already exists
-            existing = Performer.query.filter_by(stashdb_id=stashdb_id).first()
-            if existing:
-                return jsonify({'status': 'error', 'message': 'Performer already exists'}), 400
-            
-            # Create new performer
-            performer = Performer(
-                stashdb_id=stashdb_id,
-                name=name,
-                monitored=True,
-                stash_id=None  # Will be null for StashDB additions
-            )
-            
-            db.session.add(performer)
-            db.session.commit()
-            
-            return jsonify({
-                'status': 'success',
-                'message': f'Added {name} to monitoring list',
-                'performer_id': performer.id
-            })
-            
-        except Exception as e:
-            app.logger.error(f"Error adding performer: {str(e)}")
-            db.session.rollback()
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
-    @app.route('/api/get-trending-scenes', methods=['GET'])
-    def get_trending_scenes():
-        """Get trending scenes from StashDB with thumbnails"""
-        try:
-            # Get recent scenes from StashDB
-            result = stashdb_api.get_recent_scenes(days=7, page=1)
-            scenes = result.get('scenes', [])
-            
-            # Format scenes with thumbnail data
-            formatted_scenes = []
-            for scene in scenes[:25]:  # Limit to top 25
-                # Get the best thumbnail
-                thumbnail_url = None
-                images = scene.get('images', [])
-                if images:
-                    # Sort by size and pick the best one
-                    sorted_images = sorted(images, key=lambda x: (x.get('width', 0) * x.get('height', 0)), reverse=True)
-                    if sorted_images:
-                        thumbnail_url = sorted_images[0].get('url')
-                
-                # Get performer names
-                performer_names = []
-                performers = scene.get('performers', [])
-                for perf in performers:
-                    performer_data = perf.get('performer', {})
-                    if performer_data.get('name'):
-                        performer_names.append(performer_data['name'])
-                
-                # Get studio name
-                studio_name = None
-                studio = scene.get('studio', {})
-                if studio:
-                    studio_name = studio.get('name')
-                
-                formatted_scenes.append({
-                    'stashdb_id': scene.get('id'),
-                    'title': scene.get('title', 'Unknown Title'),
-                    'performers': performer_names,
-                    'studio': studio_name,
-                    'release_date': scene.get('date'),
-                    'duration': scene.get('duration'),
-                    'thumbnail_url': thumbnail_url,
-                    'stashdb_url': f"https://stashdb.org/scenes/{scene.get('id')}"
-                })
-            
-            return jsonify({
-                'status': 'success',
-                'scenes': formatted_scenes,
-                'count': len(formatted_scenes)
-            })
-            
-        except Exception as e:
-            app.logger.error(f"Error getting trending scenes: {str(e)}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-    
     @app.route('/api/add-to-whisparr', methods=['POST'])
     def add_to_whisparr():
         """Add a wanted scene to Whisparr using StashDB UUID"""
@@ -578,6 +453,189 @@ def create_app():
         """Redirect to Whisparr movie page"""
         whisparr_url = os.environ.get('WHISPARR_URL', 'http://10.11.12.77:6969')
         return redirect(f"{whisparr_url}/movie/{id}")
+    
+    @app.route('/api/search-performers', methods=['POST'])
+    def search_performers():
+        """Search for performers in StashDB"""
+        try:
+            data = request.json
+            search_term = data.get('query', '').strip()
+            
+            if not search_term:
+                return jsonify({'status': 'error', 'message': 'Search term required'}), 400
+            
+            # Search StashDB for performers
+            results = stashdb_api.search_performer(search_term)
+            
+            # Format results for frontend
+            formatted_results = []
+            for performer in results:
+                formatted_results.append({
+                    'stashdb_id': performer.get('id'),
+                    'name': performer.get('name'),
+                    'stashdb_url': f"https://stashdb.org/performers/{performer.get('id')}"
+                })
+            
+            return jsonify({
+                'status': 'success',
+                'results': formatted_results,
+                'count': len(formatted_results)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error searching performers: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/add-performer', methods=['POST'])
+    def add_performer():
+        """Add a performer to monitoring list"""
+        try:
+            data = request.json
+            stashdb_id = data.get('stashdb_id')
+            name = data.get('name')
+            
+            if not stashdb_id or not name:
+                return jsonify({'status': 'error', 'message': 'StashDB ID and name required'}), 400
+            
+            # Check if performer already exists
+            existing = Performer.query.filter_by(stashdb_id=stashdb_id).first()
+            if existing:
+                return jsonify({'status': 'error', 'message': 'Performer already exists'}), 400
+            
+            # Create new performer
+            performer = Performer(
+                stashdb_id=stashdb_id,
+                name=name,
+                monitored=True,
+                stash_id=None  # Will be null for StashDB additions
+            )
+            
+            db.session.add(performer)
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Added {name} to monitoring list',
+                'performer_id': performer.id
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error adding performer: {str(e)}")
+            db.session.rollback()
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/get-trending-scenes', methods=['GET'])
+    def get_trending_scenes():
+        """Get trending scenes from StashDB with thumbnails"""
+        try:
+            # Get recent scenes from StashDB
+            result = stashdb_api.get_recent_scenes(days=7, page=1)
+            scenes = result.get('scenes', [])
+            
+            # Format scenes with thumbnail data
+            formatted_scenes = []
+            for scene in scenes[:25]:  # Limit to top 25
+                # Get the best thumbnail
+                thumbnail_url = None
+                images = scene.get('images', [])
+                if images:
+                    # Sort by size and pick the best one
+                    sorted_images = sorted(images, key=lambda x: (x.get('width', 0) * x.get('height', 0)), reverse=True)
+                    if sorted_images:
+                        thumbnail_url = sorted_images[0].get('url')
+                
+                # Get performer names
+                performer_names = []
+                performers = scene.get('performers', [])
+                for perf in performers:
+                    performer_data = perf.get('performer', {})
+                    if performer_data.get('name'):
+                        performer_names.append(performer_data['name'])
+                
+                # Get studio name
+                studio_name = None
+                studio = scene.get('studio', {})
+                if studio:
+                    studio_name = studio.get('name')
+                
+                formatted_scenes.append({
+                    'stashdb_id': scene.get('id'),
+                    'title': scene.get('title', 'Unknown Title'),
+                    'performers': performer_names,
+                    'studio': studio_name,
+                    'release_date': scene.get('date'),
+                    'duration': scene.get('duration'),
+                    'thumbnail_url': thumbnail_url,
+                    'stashdb_url': f"https://stashdb.org/scenes/{scene.get('id')}"
+                })
+            
+            return jsonify({
+                'status': 'success',
+                'scenes': formatted_scenes,
+                'count': len(formatted_scenes)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error getting trending scenes: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    @app.route('/api/get-trending-performers', methods=['GET'])
+    def get_trending_performers():
+        """Get trending performers from StashDB with optional gender filtering"""
+        try:
+            # Get filter parameters
+            gender = request.args.get('gender')  # 'female', 'male', or None for all
+            page = int(request.args.get('page', 1))
+            limit = int(request.args.get('limit', 25))
+            
+            # Get trending performers from StashDB
+            result = stashdb_api.get_trending_performers(gender=gender, page=page, limit=limit)
+            performers = result.get('performers', [])
+            
+            # Format performers with additional data
+            formatted_performers = []
+            for performer in performers:
+                # Get the best image
+                image_url = None
+                images = performer.get('images', [])
+                if images:
+                    # Sort by size and pick the best one
+                    sorted_images = sorted(images, key=lambda x: (x.get('width', 0) * x.get('height', 0)), reverse=True)
+                    if sorted_images:
+                        image_url = sorted_images[0].get('url')
+                
+                # Format performer data
+                formatted_performer = {
+                    'stashdb_id': performer.get('id'),
+                    'name': performer.get('name', 'Unknown'),
+                    'gender': performer.get('gender', 'Unknown'),
+                    'birth_date': performer.get('birth_date'),
+                    'career_start_year': performer.get('career_start_year'),
+                    'career_end_year': performer.get('career_end_year'),
+                    'scene_count': performer.get('scene_count', 0),
+                    'image_url': image_url,
+                    'stashdb_url': f"https://stashdb.org/performers/{performer.get('id')}",
+                    'height': performer.get('height'),
+                    'ethnicity': performer.get('ethnicity'),
+                    'country': performer.get('country'),
+                    'eye_color': performer.get('eye_color'),
+                    'hair_color': performer.get('hair_color')
+                }
+                
+                formatted_performers.append(formatted_performer)
+            
+            return jsonify({
+                'status': 'success',
+                'performers': formatted_performers,
+                'count': len(formatted_performers),
+                'total': result.get('count', 0),
+                'page': page,
+                'gender_filter': gender
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error getting trending performers: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
     
     @app.route('/health')
     def health():

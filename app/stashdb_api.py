@@ -507,22 +507,212 @@ class StashDBAPI:
         logger.info(f"Retrieved {len(all_tags)} tags from StashDB (total available: {total_count})")
         return all_tags
     
+    def get_trending_performers(self, gender: str = None, page: int = 1, limit: int = 25) -> Dict:
+        """Get trending/popular performers from StashDB with optional gender filtering"""
+        query = '''
+        query GetTrendingPerformers($input: PerformerQueryInput!) {
+            queryPerformers(input: $input) {
+                count
+                performers {
+                    id
+                    name
+                    disambiguation
+                    gender
+                    birth_date
+                    career_start_year
+                    career_end_year
+                    height
+                    cup_size
+                    band_size
+                    waist_size
+                    hip_size
+                    breast_type
+                    eye_color
+                    hair_color
+                    ethnicity
+                    country
+                    images {
+                        url
+                        width
+                        height
+                    }
+                    scene_count
+                }
+            }
+        }
+        '''
+        
+        # Build query variables
+        variables = {
+            'input': {
+                'page': page,
+                'per_page': limit,
+                'sort': 'SCENE_COUNT',  # Sort by scene count for "trending"
+                'direction': 'DESC'
+            }
+        }
+        
+        # Add gender filter if specified
+        if gender and gender.upper() in ['MALE', 'FEMALE', 'TRANSGENDER_MALE', 'TRANSGENDER_FEMALE', 'INTERSEX', 'NON_BINARY']:
+            variables['input']['gender'] = gender.upper()
+        
+        try:
+            data = self._make_request(query, variables)
+            query_result = data.get('queryPerformers', {})
+            performers = query_result.get('performers', [])
+            count = query_result.get('count', 0)
+            
+            logger.info(f"Found {len(performers)} trending performers (gender: {gender or 'all'})")
+            return {'count': count, 'performers': performers}
+            
+        except Exception as e:
+            logger.error(f"Error getting trending performers: {str(e)}")
+            # Fallback to search-based method
+            return self._get_trending_performers_fallback(gender, limit)
+    
+    def _get_trending_performers_fallback(self, gender: str = None, limit: int = 25) -> Dict:
+        """Fallback method for trending performers when GraphQL queries fail"""
+        try:
+            # Search for popular performer names as fallback
+            popular_terms = ["popular", "top", "best", "famous", "star"]
+            all_performers = []
+            
+            for term in popular_terms[:2]:  # Limit to avoid too many requests
+                try:
+                    results = self.search_performer(term)
+                    all_performers.extend(results)
+                except Exception as e:
+                    logger.error(f"Error searching trending performers with term '{term}': {str(e)}")
+                    continue
+            
+            # Remove duplicates based on performer ID
+            unique_performers = []
+            seen_ids = set()
+            for performer in all_performers:
+                performer_id = performer.get('id')
+                if performer_id and performer_id not in seen_ids:
+                    unique_performers.append(performer)
+                    seen_ids.add(performer_id)
+            
+            # Limit results
+            limited_performers = unique_performers[:limit]
+            
+            logger.info(f"Fallback found {len(limited_performers)} trending performers")
+            return {'count': len(limited_performers), 'performers': limited_performers}
+            
+        except Exception as e:
+            logger.error(f"Fallback error getting trending performers: {str(e)}")
+            return {'count': 0, 'performers': []}
+    def get_trending_performers(self, gender: str = None, page: int = 1, limit: int = 25) -> Dict:
+        """Get trending/popular performers from StashDB with optional gender filtering"""
+        query = '''
+        query GetTrendingPerformers($input: PerformerQueryInput!) {
+            queryPerformers(input: $input) {
+                count
+                performers {
+                    id
+                    name
+                    disambiguation
+                    gender
+                    birth_date
+                    career_start_year
+                    career_end_year
+                    height
+                    cup_size
+                    band_size
+                    waist_size
+                    hip_size
+                    breast_type
+                    eye_color
+                    hair_color
+                    ethnicity
+                    country
+                    images {
+                        url
+                        width
+                        height
+                    }
+                    scene_count
+                }
+            }
+        }
+        '''
+        
+        # Build query variables
+        variables = {
+            'input': {
+                'page': page,
+                'per_page': limit,
+                'sort': 'SCENE_COUNT',  # Sort by scene count for "trending"
+                'direction': 'DESC'
+            }
+        }
+        
+        # Add gender filter if specified
+        if gender and gender.upper() in ['MALE', 'FEMALE', 'TRANSGENDER_MALE', 'TRANSGENDER_FEMALE', 'INTERSEX', 'NON_BINARY']:
+            variables['input']['gender'] = gender.upper()
+        
+        try:
+            data = self._make_request(query, variables)
+            query_result = data.get('queryPerformers', {})
+            performers = query_result.get('performers', [])
+            count = query_result.get('count', 0)
+            
+            logger.info(f"Found {len(performers)} trending performers (gender: {gender or 'all'})")
+            return {'count': count, 'performers': performers}
+            
+        except Exception as e:
+            logger.error(f"Error getting trending performers: {str(e)}")
+            # Fallback to search-based method
+            return self._get_trending_performers_fallback(gender, limit)
+    
+    def _get_trending_performers_fallback(self, gender: str = None, limit: int = 25) -> Dict:
+        """Fallback method for trending performers when GraphQL queries fail"""
+        try:
+            # Search for popular performer names as fallback
+            popular_terms = ["popular", "top", "best", "famous", "star"]
+            all_performers = []
+            
+            for term in popular_terms[:2]:  # Limit to avoid too many requests
+                try:
+                    results = self.search_performer(term)
+                    all_performers.extend(results)
+                except Exception as e:
+                    logger.error(f"Error searching trending performers with term '{term}': {str(e)}")
+                    continue
+            
+            # Remove duplicates based on performer ID
+            unique_performers = []
+            seen_ids = set()
+            for performer in all_performers:
+                performer_id = performer.get('id')
+                if performer_id and performer_id not in seen_ids:
+                    unique_performers.append(performer)
+                    seen_ids.add(performer_id)
+            
+            # Limit results
+            limited_performers = unique_performers[:limit]
+            
+            logger.info(f"Fallback found {len(limited_performers)} trending performers")
+            return {'count': len(limited_performers), 'performers': limited_performers}
+            
+        except Exception as e:
+            logger.error(f"Fallback error getting trending performers: {str(e)}")
+            return {'count': 0, 'performers': []}
+    
     def test_connection(self) -> bool:
-        """Test connection to StashDB using a working query"""
         query = '''
         query TestConnection {
-            queryTags(input: {page: 1, per_page: 1}) {
-                count
+            version {
+                version
+                build_time
             }
         }
         '''
         
         try:
-            data = self._make_request(query)
-            # If we can query tags, the connection works
-            tag_data = data.get('queryTags', {})
-            count = tag_data.get('count', 0)
-            logger.info(f"StashDB connection test successful - {count} tags available")
+            self._make_request(query)
+            logger.info("StashDB connection test successful")
             return True
         except Exception as e:
             logger.error(f"StashDB connection test failed: {str(e)}")

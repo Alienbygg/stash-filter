@@ -3,23 +3,17 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies including build tools
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     cron \
     sqlite3 \
-    gcc \
-    g++ \
-    libxml2-dev \
-    libxslt1-dev \
-    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies with better error handling
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -27,17 +21,11 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs
 
-# Set permissions for scripts and migrations
+# Set permissions
 RUN chmod +x /app/scripts/entrypoint.sh
-RUN chmod +x /app/run_migration.py
-RUN find /app/migrations -name "*.py" -exec chmod +x {} \;
 
 # Create cron job for daily checks
 RUN echo "0 6 * * * cd /app && python app/scheduler.py" | crontab -
-
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV DATABASE_PATH=/app/data/stash_filter.db
 
 # Expose port
 EXPOSE 5000

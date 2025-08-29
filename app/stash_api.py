@@ -210,10 +210,25 @@ class StashAPI:
     
     def check_scene_exists(self, stashdb_id: str) -> bool:
         """Check if a scene with given StashDB ID exists in Stash"""
-        # Temporarily disabled due to GraphQL compatibility issues with Stash v0.28.1
-        # TODO: Fix GraphQL query for proper Stash version compatibility
-        logger.warning(f"Scene existence check disabled for StashDB ID: {stashdb_id}")
-        return False  # Assume scene doesn't exist to avoid errors
+        query = '''
+        query FindSceneByStashID($stash_id: String!) {
+            findScenes(
+                scene_filter: { stash_id: { value: $stash_id, modifier: EQUALS } }
+                filter: { per_page: 1 }
+            ) {
+                count
+            }
+        }
+        '''
+        
+        variables = {'stash_id': stashdb_id}
+        
+        try:
+            data = self._make_request(query, variables)
+            return data.get('findScenes', {}).get('count', 0) > 0
+        except Exception as e:
+            logger.error(f"Error checking scene existence: {str(e)}")
+            return False
     
     def get_performer_scenes(self, performer_id: str) -> List[Dict]:
         """Get scenes for a specific performer"""

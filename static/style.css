@@ -376,3 +376,183 @@
     padding: 0.2rem 0.4rem;
   }
 }
+
+/* Trending Performers Styles */
+.trending-performer-card {
+  transition: transform 0.3s, box-shadow 0.3s;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid transparent;
+}
+
+.trending-performer-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.2);
+  border-color: var(--primary-color);
+}
+
+.performer-thumb {
+  transition: transform 0.3s ease;
+  border-radius: 0;
+}
+
+.trending-performer-card:hover .performer-thumb {
+  transform: scale(1.05);
+}
+
+.trending-performer-card .card-body {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  padding: 1.25rem;
+}
+
+.trending-performer-card .card-title {
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.performer-details {
+  background-color: rgba(108, 117, 125, 0.1);
+  border-radius: 8px;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.performer-details div {
+  margin-bottom: 0.25rem;
+}
+
+.performer-details div:last-child {
+  margin-bottom: 0;
+}
+
+.performer-details i {
+  width: 12px;
+  margin-right: 0.5rem;
+  color: var(--primary-color);
+}
+
+/* Performer card badges */
+.trending-performer-card .badge {
+  font-size: 0.7rem;
+  padding: 0.35rem 0.6rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.trending-performer-card .bg-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+}
+
+.trending-performer-card .bg-secondary {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+}
+
+/* Button styling in trending performer cards */
+.trending-performer-card .btn-group .btn {
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.trending-performer-card .btn-group .btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.trending-performer-card .btn-group .btn:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.trending-performer-card .btn-outline-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+}
+
+.trending-performer-card .btn-success:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(40,167,69,0.3);
+}
+
+/* Modal styling for trending performers */
+.modal-xl {
+  max-width: 1200px;
+}
+
+#trendingPerformersModal .modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px 15px 0 0;
+}
+
+#trendingPerformersModal .modal-content {
+  border-radius: 15px;
+  border: none;
+  box-shadow: 0 1rem 3rem rgba(0,0,0,0.3);
+}
+
+#trendingPerformersModal .form-select,
+#trendingPerformersModal .btn {
+  border-radius: 20px;
+}
+
+/* Loading animation for trending performers */
+#trendingLoading {
+  padding: 3rem;
+}
+
+#trendingLoading i {
+  color: var(--primary-color);
+}
+
+/* Gender filter styling */
+#genderFilter {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+#genderFilter:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.15);
+  transform: scale(1.02);
+}
+
+/* Responsive adjustments for trending performers */
+@media (max-width: 768px) {
+  .trending-performer-card {
+    margin-bottom: 1rem;
+  }
+  
+  .performer-thumb {
+    height: 180px !important;
+  }
+  
+  .trending-performer-card .card-title {
+    font-size: 0.9rem;
+  }
+  
+  .performer-details {
+    font-size: 0.75rem;
+  }
+  
+  .trending-performer-card .btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .performer-thumb {
+    height: 160px !important;
+  }
+  
+  .trending-performer-card .badge {
+    font-size: 0.6rem;
+    padding: 0.25rem 0.5rem;
+  }
+}

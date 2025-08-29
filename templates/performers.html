@@ -13,6 +13,9 @@
             <button type="button" class="btn btn-sm btn-success" onclick="showAddPerformerModal()">
                 <i class="fas fa-plus"></i> Add Manually
             </button>
+            <button type="button" class="btn btn-sm btn-info" onclick="showTrendingPerformersModal()">
+                <i class="fas fa-fire"></i> Trending Performers
+            </button>
         </div>
     </div>
 </div>
@@ -210,6 +213,64 @@
     </div>
 </div>
 
+<!-- Trending Performers Modal -->
+<div class="modal fade" id="trendingPerformersModal" tabindex="-1" aria-labelledby="trendingPerformersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="trendingPerformersModalLabel">
+                    <i class="fas fa-fire"></i> Trending Performers
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Gender Filter -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="genderFilter" class="form-label">Filter by Gender:</label>
+                        <select class="form-select" id="genderFilter">
+                            <option value="">All Genders</option>
+                            <option value="female">Female</option>
+                            <option value="male">Male</option>
+                            <option value="transgender_male">Transgender Male</option>
+                            <option value="transgender_female">Transgender Female</option>
+                            <option value="non_binary">Non-Binary</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button class="btn btn-primary" id="loadTrendingBtn">
+                            <i class="fas fa-search"></i> Load Trending Performers
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading Indicator -->
+                <div id="trendingLoading" style="display: none;">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading trending performers...</p>
+                    </div>
+                </div>
+                
+                <!-- Results Container -->
+                <div id="trendingResults" style="display: none;">
+                    <h6><i class="fas fa-fire"></i> Trending Performers:</h6>
+                    <div class="row" id="trendingContainer">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- No Results -->
+                <div id="trendingNoResults" style="display: none;">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle"></i> No trending performers found. Try a different filter.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -222,6 +283,14 @@ function checkPerformer(performerId) {
 function showAddPerformerModal() {
     const modal = new bootstrap.Modal(document.getElementById('addPerformerModal'));
     modal.show();
+}
+
+function showTrendingPerformersModal() {
+    const modal = new bootstrap.Modal(document.getElementById('trendingPerformersModal'));
+    modal.show();
+    
+    // Auto-load trending performers when modal opens
+    loadTrendingPerformers();
 }
 
 // Performer search functionality
@@ -327,6 +396,132 @@ document.getElementById('performerSearch').addEventListener('keypress', function
         document.getElementById('searchPerformersBtn').click();
     }
 });
+
+// Trending Performers functionality
+function loadTrendingPerformers() {
+    const gender = document.getElementById('genderFilter').value;
+    
+    // Show loading
+    document.getElementById('trendingLoading').style.display = 'block';
+    document.getElementById('trendingResults').style.display = 'none';
+    document.getElementById('trendingNoResults').style.display = 'none';
+    
+    // Build URL with filter parameters
+    let url = '/api/get-trending-performers?limit=20';
+    if (gender) {
+        url += `&gender=${gender}`;
+    }
+    
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('trendingLoading').style.display = 'none';
+        
+        if (data.status === 'success' && data.performers && data.performers.length > 0) {
+            displayTrendingPerformers(data.performers);
+        } else {
+            document.getElementById('trendingNoResults').style.display = 'block';
+        }
+    })
+    .catch(error => {
+        document.getElementById('trendingLoading').style.display = 'none';
+        document.getElementById('trendingNoResults').style.display = 'block';
+        console.error('Error loading trending performers:', error);
+    });
+}
+
+function displayTrendingPerformers(performers) {
+    const container = document.getElementById('trendingContainer');
+    container.innerHTML = '';
+    
+    performers.forEach(performer => {
+        const performerCard = createTrendingPerformerCard(performer);
+        container.appendChild(performerCard);
+    });
+    
+    document.getElementById('trendingResults').style.display = 'block';
+}
+
+function createTrendingPerformerCard(performer) {
+    const col = document.createElement('div');
+    col.className = 'col-lg-3 col-md-4 col-sm-6 mb-3';
+    
+    const imageUrl = performer.image_url || '/static/images/performer-placeholder.svg';
+    const sceneCount = performer.scene_count || 0;
+    const gender = performer.gender || 'Unknown';
+    const birthDate = performer.birth_date ? new Date(performer.birth_date).getFullYear() : null;
+    const careerStart = performer.career_start_year || null;
+    
+    col.innerHTML = `
+        <div class="card h-100 trending-performer-card">
+            <div class="position-relative">
+                <img src="${imageUrl}" class="card-img-top performer-thumb" alt="${performer.name}" 
+                     style="height: 200px; object-fit: cover; cursor: pointer;"
+                     onerror="this.src='/static/images/performer-placeholder.svg'">
+                <div class="position-absolute top-0 end-0 p-2">
+                    <span class="badge bg-primary">${sceneCount} scenes</span>
+                </div>
+                <div class="position-absolute bottom-0 start-0 p-2">
+                    <span class="badge bg-secondary">${gender}</span>
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <h6 class="card-title">${performer.name}</h6>
+                <div class="performer-details text-muted small mb-2">
+                    ${birthDate ? `<div><i class="fas fa-birthday-cake"></i> Born: ${birthDate}</div>` : ''}
+                    ${careerStart ? `<div><i class="fas fa-calendar"></i> Career: ${careerStart}</div>` : ''}
+                    ${performer.country ? `<div><i class="fas fa-globe"></i> ${performer.country}</div>` : ''}
+                    ${performer.ethnicity ? `<div><i class="fas fa-user"></i> ${performer.ethnicity}</div>` : ''}
+                </div>
+                <div class="mt-auto">
+                    <div class="btn-group w-100" role="group">
+                        <a href="${performer.stashdb_url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i> StashDB
+                        </a>
+                        <button class="btn btn-sm btn-success" onclick="addTrendingPerformer('${performer.stashdb_id}', '${performer.name}')">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return col;
+}
+
+function addTrendingPerformer(stashdbId, name) {
+    if (confirm(`Add ${name} to your monitoring list?`)) {
+        fetch('/api/add-performer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                stashdb_id: stashdbId,
+                name: name
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Performer added successfully!');
+                // Optionally close the modal and reload the page
+                bootstrap.Modal.getInstance(document.getElementById('trendingPerformersModal')).hide();
+                setTimeout(() => location.reload(), 500);
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+
+// Event listeners for trending performers
+document.getElementById('loadTrendingBtn').addEventListener('click', loadTrendingPerformers);
+document.getElementById('genderFilter').addEventListener('change', loadTrendingPerformers);
 
 // Bind sync favorites to empty state button
 document.addEventListener('DOMContentLoaded', function() {
