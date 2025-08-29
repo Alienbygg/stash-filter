@@ -230,7 +230,7 @@
                         <label for="genderFilter" class="form-label">Filter by Gender:</label>
                         <select class="form-select" id="genderFilter">
                             <option value="">All Genders</option>
-                            <option value="female">Female</option>
+                            <option value="female" selected>Female</option>
                             <option value="male">Male</option>
                             <option value="transgender_male">Transgender Male</option>
                             <option value="transgender_female">Transgender Female</option>
@@ -534,3 +534,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+<script>
+// Set female as default when trending performers modal opens
+$(document).on('shown.bs.modal', '#trendingPerformersModal', function () {
+    $('#genderFilter').val('female');
+    // Trigger the filter to load female performers by default
+    $('#genderFilter').trigger('change');
+});
+</script>
