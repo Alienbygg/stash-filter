@@ -56,3 +56,6 @@ application = create_app()
 if __name__ == "__main__":
     # For development/testing
     application.run(host='0.0.0.0', port=5000, debug=False)
+
+# Expose app under both names for compatibility
+app = application
