@@ -556,3 +556,51 @@
     padding: 0.25rem 0.5rem;
   }
 }
+
+/* Fix performer image scaling in trending modal */
+.performer-card img,
+.performer-thumbnail {
+    width: 100% !important;
+    height: 200px !important;
+    object-fit: cover !important;
+    object-position: center top !important;
+    border-radius: 8px !important;
+    display: block !important;
+}
+
+/* Fix trending scenes image loading */
+.trending-scenes .scene-card img {
+    width: 100% !important;
+    height: 150px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border-radius: 6px !important;
+}
+
+/* Ensure image containers have proper dimensions */
+.performer-card .image-container,
+.scene-card .image-container {
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+/* Image loading placeholder */
+.image-loading {
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Handle missing images gracefully */
+img[src=""], img:not([src]) {
+    display: none;
+}
+
+.performer-card img[onerror] {
+    content: url('/static/images/performer-placeholder.svg');
+}
