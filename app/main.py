@@ -670,3 +670,53 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=False)
+
+@app.route('/api/add-scene-to-whisparr', methods=['POST'])
+def add_scene_to_whisparr():
+    """Actually add scene to Whisparr - replace the placeholder"""
+    try:
+        data = request.get_json()
+        scene_title = data.get('title', '')
+        scene_id = data.get('scene_id', '')
+        
+        if not scene_title:
+            return jsonify({'error': 'Scene title is required'}), 400
+        
+        # Import Whisparr API
+        from app.whisparr_api import WhisparrAPI
+        whisparr = WhisparrAPI()
+        
+        # Add to Whisparr
+        result = whisparr.add_movie(scene_title)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'message': f'Successfully added "{scene_title}" to Whisparr'
+            })
+        else:
+            return jsonify({'error': 'Failed to add to Whisparr'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error adding scene to Whisparr: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def get_wanted_scenes_with_date_filter(from_date=None, to_date=None):
+    """Get wanted scenes with date filtering and proper sorting"""
+    try:
+        query = WantedScene.query
+        
+        # Add date filters if provided
+        if from_date:
+            query = query.filter(WantedScene.release_date >= from_date)
+        if to_date:
+            query = query.filter(WantedScene.release_date <= to_date)
+            
+        # Sort by release date descending (newest first)
+        wanted_scenes = query.order_by(WantedScene.release_date.desc()).all()
+        
+        return wanted_scenes
+        
+    except Exception as e:
+        logger.error(f"Error fetching wanted scenes: {str(e)}")
+        return []

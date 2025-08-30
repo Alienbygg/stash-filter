@@ -1,0 +1,48 @@
+<!-- Date filter for wanted scenes -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label for="dateFrom" class="form-label">Show scenes from:</label>
+        <input type="date" class="form-control" id="dateFrom" value="">
+    </div>
+    <div class="col-md-4">
+        <label for="dateTo" class="form-label">To (leave empty for today):</label>
+        <input type="date" class="form-control" id="dateTo" value="">
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">&nbsp;</label>
+        <div class="d-grid">
+            <button type="button" class="btn btn-primary" onclick="applyDateFilter()">Apply Filter</button>
+            <button type="button" class="btn btn-secondary mt-1" onclick="setOneYearBack()">Last 1 Year</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function setOneYearBack() {
+    const today = new Date();
+    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    
+    document.getElementById('dateFrom').value = oneYearAgo.toISOString().split('T')[0];
+    document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+}
+
+function applyDateFilter() {
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value || new Date().toISOString().split('T')[0];
+    
+    // Reload page with date parameters
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('from_date', dateFrom);
+    if (dateTo) params.set('to_date', dateTo);
+    
+    window.location.href = '/wanted_scenes?' + params.toString();
+}
+
+// Set default to 1 year back on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has('from_date')) {
+        setOneYearBack();
+    }
+});
+</script>

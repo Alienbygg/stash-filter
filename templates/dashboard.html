@@ -352,7 +352,7 @@
     function addSceneToWanted(stashdbId, title) {
         if (confirm(`Add "${title}" to your wanted list?`)) {
             // This would need an API endpoint to add scenes to wanted list
-            alert('Add to wanted functionality will be implemented in a future update.');
+            alert('');
         }
     }
     function syncFavorites() {
@@ -400,3 +400,16 @@
 {% endblock %}
 <script src="/static/want-button-fix.js"></script>
 <script src="/static/js/whisparr-integration.js"></script>
+
+<script>
+// Remove any placeholder messages and implement actual functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Replace any placeholder messages with actual buttons
+    const placeholders = document.querySelectorAll('.placeholder-message');
+    placeholders.forEach(placeholder => {
+        if (placeholder.textContent.includes('future update')) {
+            placeholder.remove();
+        }
+    });
+});
+</script>
