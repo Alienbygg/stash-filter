@@ -87,7 +87,7 @@ def create_app():
         # Calculate scenes added in the last 7 days
         from datetime import datetime, timedelta
         week_ago = datetime.utcnow() - timedelta(days=7)
-        this_week_count = WantedScene.query.order_by(WantedScene.release_date.desc()).filter(WantedScene.added_date >= week_ago).count()
+        this_week_count = WantedScene.query.filter(WantedScene.added_date >= week_ago).count()
         
         return render_template('wanted_scenes.html', 
                              wanted_scenes=wanted, 
@@ -361,7 +361,7 @@ def create_app():
     def refresh_whisparr_status():
         """Refresh download status from Whisparr"""
         try:
-            wanted_scenes = WantedScene.query.order_by(WantedScene.release_date.desc()).filter_by(added_to_whisparr=True).all()
+            wanted_scenes = WantedScene.query.filter_by(added_to_whisparr=True).all()
             updated_count = 0
             
             for wanted in wanted_scenes:

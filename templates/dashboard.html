@@ -413,3 +413,29 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<script>
+function handleWantButton(button) {
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+    button.disabled = true;
+    
+    setTimeout(() => {
+        button.innerHTML = '<i class="fas fa-check"></i> Added';
+        button.className = button.className.replace('btn-outline-success', 'btn-success');
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.className = button.className.replace('btn-success', 'btn-outline-success');
+            button.disabled = false;
+        }, 3000);
+    }, 1500);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-outline-success').forEach(button => {
+        if (button.textContent.includes('Want')) {
+            button.onclick = () => handleWantButton(button);
+        }
+    });
+});
+</script>
