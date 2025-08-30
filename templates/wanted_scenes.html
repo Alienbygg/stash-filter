@@ -460,3 +460,71 @@ function cleanupDuplicates() {
 document.addEventListener('DOMContentLoaded', setupFilters);
 </script>
 {% endblock %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sort scenes by release date (newest first)
+    const container = document.querySelector('tbody, .scenes-list, .wanted-scenes-container');
+    if (container) {
+        const rows = Array.from(container.querySelectorAll('tr:not(:first-child), .scene-item, .wanted-scene'));
+        
+        rows.sort((a, b) => {
+            const dateA = a.querySelector('.release-date, [data-date], .date')?.textContent || '1970-01-01';
+            const dateB = b.querySelector('.release-date, [data-date], .date')?.textContent || '1970-01-01';
+            return new Date(dateB) - new Date(dateA);
+        });
+        
+        rows.forEach(row => container.appendChild(row));
+    }
+});
+</script>
+
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label>From Date:</label>
+                        <input type="date" id="fromDate" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label>To Date:</label>
+                        <input type="date" id="toDate" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label>&nbsp;</label>
+                        <button onclick="applyFilter()" class="btn btn-primary d-block">Filter</button>
+                    </div>
+                    <div class="col-md-2">
+                        <label>&nbsp;</label>
+                        <button onclick="setLastYear()" class="btn btn-secondary d-block">Last Year</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setLastYear() {
+    const today = new Date();
+    const lastYear = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    document.getElementById('fromDate').value = lastYear.toISOString().split('T')[0];
+    document.getElementById('toDate').value = today.toISOString().split('T')[0];
+}
+
+function applyFilter() {
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    
+    document.querySelectorAll('tbody tr:not(:first-child), .scene-item').forEach(row => {
+        const dateText = row.querySelector('.release-date, [data-date]')?.textContent;
+        if (dateText) {
+            const date = new Date(dateText);
+            const show = (!from || date >= new Date(from)) && (!to || date <= new Date(to));
+            row.style.display = show ? '' : 'none';
+        }
+    });
+}
+</script>

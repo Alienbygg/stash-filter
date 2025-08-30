@@ -407,7 +407,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Replace any placeholder messages with actual buttons
     const placeholders = document.querySelectorAll('.placeholder-message');
     placeholders.forEach(placeholder => {
-        if (placeholder.textContent.includes('future update')) {
             placeholder.remove();
         }
     });
