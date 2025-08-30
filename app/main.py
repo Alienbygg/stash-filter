@@ -224,6 +224,37 @@ def create_app():
             app.logger.error(f"Error testing connections: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
     
+    @app.route('/api/add-to-whisparr', methods=['POST'])
+    def add_to_whisparr():
+        """Add a wanted scene to Whisparr using StashDB UUID"""
+        try:
+            data = request.json
+            wanted_id = data.get('wanted_id')
+            
+            wanted = WantedScene.query.get(wanted_id)
+            if not wanted:
+                return jsonify({'status': 'error', 'message': 'Wanted scene not found'}), 404
+            
+            if wanted.added_to_whisparr:
+                return jsonify({'status': 'error', 'message': 'Scene already added to Whisparr'}), 400
+            
+            # Get the scene's StashDB UUID
+            scene = wanted.scene
+            if not scene or not scene.stashdb_id:
+                return jsonify({'status': 'error', 'message': 'No StashDB ID found for this scene'}), 400
+            
+            # Check if already exists in Whisparr
+            if whisparr_api.check_scene_exists_by_uuid(scene.stashdb_id):
+                wanted.added_to_whisparr = True
+                wanted.status = 'exists'
+                db.session.commit()
+                return jsonify({'status': 'success', 'message': 'Scene already exists in Whisparr'})
+            
+            # Add to Whisparr using UUID-based method
+            result = whisparr_api.add_scene_by_uuid(scene.stashdb_id)
+            
+            if result:
+                wanted.added_to_whisparr = True
                 wanted.whisparr_id = str(result.get('id', ''))
                 wanted.status = 'requested'
                 db.session.commit()
@@ -637,3 +668,54 @@ def create_app():
     return app
 
 if __name__ == '__main__':
+    app = create_app()
+    app.run(host='0.0.0.0', port=5000, debug=False)
+
+@app.route('/api/fix-scene-images', methods=['GET'])
+def fix_scene_images():
+    """Fix scene image URLs by prepending Stash server URL"""
+    try:
+        stash_url = os.environ.get('STASH_URL', 'http://localhost:6969')
+        # Ensure stash_url doesn't end with /
+        stash_url = stash_url.rstrip('/')
+        
+        # Get scenes and fix image URLs
+        scenes = get_trending_scenes()
+        for scene in scenes:
+            if 'image' in scene and scene['image']:
+                if scene['image'].startswith('/'):
+                    scene['image'] = stash_url + scene['image']
+                elif not scene['image'].startswith('http'):
+                    scene['image'] = stash_url + '/' + scene['image']
+        
+        return jsonify({'success': True, 'scenes': scenes})
+    except Exception as e:
+        logger.error(f"Error fixing scene images: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/add-to-whisparr', methods=['POST'])
+def add_to_whisparr():
+    """Add scene to Whisparr monitoring"""
+    try:
+        data = request.get_json()
+        scene_title = data.get('title')
+        scene_year = data.get('year')
+        
+        if not scene_title:
+            return jsonify({'error': 'Scene title is required'}), 400
+            
+        # Initialize Whisparr API
+        from app.whisparr_api import WhisparrAPI
+        whisparr = WhisparrAPI()
+        
+        # Add to Whisparr
+        result = whisparr.add_scene(scene_title, scene_year)
+        
+        if result:
+            return jsonify({'success': True, 'message': f'Added "{scene_title}" to Whisparr'})
+        else:
+            return jsonify({'error': 'Failed to add scene to Whisparr'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error adding to Whisparr: {str(e)}")
+        return jsonify({'error': str(e)}), 500
