@@ -1,48 +1,75 @@
-<!-- Date filter for wanted scenes -->
-<div class="row mb-3">
-    <div class="col-md-4">
-        <label for="dateFrom" class="form-label">Show scenes from:</label>
-        <input type="date" class="form-control" id="dateFrom" value="">
-    </div>
-    <div class="col-md-4">
-        <label for="dateTo" class="form-label">To (leave empty for today):</label>
-        <input type="date" class="form-control" id="dateTo" value="">
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">&nbsp;</label>
-        <div class="d-grid">
-            <button type="button" class="btn btn-primary" onclick="applyDateFilter()">Apply Filter</button>
-            <button type="button" class="btn btn-secondary mt-1" onclick="setOneYearBack()">Last 1 Year</button>
+<!-- Date Range Filter for Wanted Scenes -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Filter by Release Date</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" id="dateFilterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="from_date" class="form-label">From Date:</label>
+                        <input type="date" class="form-control" id="from_date" name="from_date" 
+                               value="{{ request.args.get('from_date', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="to_date" class="form-label">To Date:</label>
+                        <input type="date" class="form-control" id="to_date" name="to_date" 
+                               value="{{ request.args.get('to_date', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-secondary" onclick="setLastYear()">
+                                <i class="fas fa-calendar-minus"></i> Last 1 Year
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearDates()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-function setOneYearBack() {
+function setLastYear() {
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
     
-    document.getElementById('dateFrom').value = oneYearAgo.toISOString().split('T')[0];
-    document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+    document.getElementById('from_date').value = oneYearAgo.toISOString().split('T')[0];
+    document.getElementById('to_date').value = today.toISOString().split('T')[0];
 }
 
-function applyDateFilter() {
-    const dateFrom = document.getElementById('dateFrom').value;
-    const dateTo = document.getElementById('dateTo').value || new Date().toISOString().split('T')[0];
-    
-    // Reload page with date parameters
-    const params = new URLSearchParams();
-    if (dateFrom) params.set('from_date', dateFrom);
-    if (dateTo) params.set('to_date', dateTo);
-    
-    window.location.href = '/wanted_scenes?' + params.toString();
+function clearDates() {
+    document.getElementById('from_date').value = '';
+    document.getElementById('to_date').value = '';
+    document.getElementById('dateFilterForm').submit();
 }
 
-// Set default to 1 year back on page load
+// Auto-set last year if no dates provided
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.has('from_date')) {
-        setOneYearBack();
+    const fromDate = document.getElementById('from_date').value;
+    const toDate = document.getElementById('to_date').value;
+    
+    if (!fromDate && !toDate && !urlParams.has('from_date') && !urlParams.has('to_date')) {
+        setLastYear();
     }
 });
 </script>
