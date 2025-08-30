@@ -543,3 +543,18 @@ $(document).on('shown.bs.modal', '#trendingPerformersModal', function () {
     $('#genderFilter').trigger('change');
 });
 </script>
+
+<script>
+function loadFemaleByDefault() {
+    // Set female as default when modal opens
+    $('#trendingPerformersModal').on('shown.bs.modal', function () {
+        $('#genderFilter').val('female');
+        // Auto-load female performers
+        loadTrendingPerformers('female');
+    });
+}
+
+$(document).ready(function() {
+    loadFemaleByDefault();
+});
+</script>
